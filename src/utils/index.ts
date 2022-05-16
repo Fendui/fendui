@@ -257,3 +257,12 @@ export const srOnlyStyle = {
   "white-space": "nowrap",
   "border-width": "0",
 };
+
+/**
+ * @name getHtml
+ * @description
+ * Returns html element
+ * **/
+export function getHtml() {
+  return document.documentElement || document.querySelector("html");
+}

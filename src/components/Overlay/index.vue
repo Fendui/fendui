@@ -1,6 +1,6 @@
 <script lang="ts">
 import { defineComponent, PropType, ref, computed, h, resolveComponent, Teleport, HTMLAttributes, watch } from "vue"
-import { componentName, optionalRootElement } from "../../utils"
+import { componentName, getHtml } from "../../utils"
 import type { LikeNumber } from "../../types"
 import { AnimType } from "ui-transition/dist/src/types"
 import TrapFocus from 'ui-trap-focus';
@@ -70,17 +70,21 @@ export default defineComponent({
     htmlActiveClass: {
       type: String,
       default: undefined
-    }
+    },
+    closeOnClickOutside: Boolean
   },
-  emits: ["update:modelValue", "active:true", "active:false", "initial-focus"],
+  emits: ["update:modelValue", "click:outside", "active:true", "active:false", "initial-focus"],
   setup(_props, { emit, slots, attrs, expose }) {
-    const previousFocus = ref<HTMLElement | null>();
+    const previousFocus = ref<HTMLElement | null>(null);
+
+    const contentRef = ref<HTMLElement | null>(null)
 
     const props = computed(() => _props)
 
     const manualActive = ref(props.value.open || false);
 
     const contentEntered = ref(false);
+
     const contentLeft = ref(false);
 
     const modelSync = computed({
@@ -105,6 +109,8 @@ export default defineComponent({
           if (!(typeof props.value.open === 'boolean')) {
             manualActive.value = val
           }
+
+          emit(`active:${val}`)
         }
       }
     })
@@ -113,7 +119,19 @@ export default defineComponent({
 
     const id = ref(uid());
 
+    const clickAwayCB = (evt: MouseEvent) => {
+      if (contentEntered.value && contentRef.value && !contentRef.value.contains(evt.target as HTMLElement)) {
+        emit("click:outside")
+
+        props.value.closeOnClickOutside && toggle(false)
+      }
+    }
+
     const removeFromOverlayState = (key: string) => {
+      const html = getHtml();
+
+      html.removeEventListener('click', clickAwayCB)
+
       const stateValue = { ...state.value };
 
       stateValue.overlays.delete(key)
@@ -122,11 +140,17 @@ export default defineComponent({
     }
 
     const addToOverlayState = (key: string) => {
+      removeFromOverlayState(key)
+
       const stateValue = { ...state.value };
 
       stateValue.overlays.set(key, (state.value.overlays.size + 1))
 
       state.value = stateValue
+
+      const html = getHtml();
+
+      html.addEventListener('click', clickAwayCB)
     }
 
     watch(() => id.value, (newVal, oldVal) => {
@@ -134,17 +158,26 @@ export default defineComponent({
       addToOverlayState(newVal)
     })
 
+    const zIndex = computed(() => {
+      return props.value.zIndex || ((modelSync.value || !contentLeft.value) ? 1000 + state.value.overlays.size : undefined)
+    })
+
     const payload = computed(() => ({
       toggle,
       open: () => toggle(true),
       close: () => toggle(false),
       active: modelSync.value,
-      id: id.value
+      id: id.value,
+      zIndex: zIndex.value
     }))
 
     expose(payload.value);
 
     const toggleHtmlClasses = (action: 'add' | 'remove') => {
+      if (action === 'remove' && state.value.overlays.size) {
+        return
+      }
+
       const { htmlActiveClass, scrollHtml } = props.value
 
       if (htmlActiveClass || !scrollHtml) {
@@ -157,10 +190,6 @@ export default defineComponent({
     }
 
     const activatorId = `activator-${id.value}`
-
-    const zIndex = computed(() => {
-      return props.value.zIndex || ((modelSync.value || !contentLeft.value) ? 1000 + state.value.overlays.size : undefined)
-    })
 
     return () => {
       const activatorSlot = slots.activator?.(payload.value);
@@ -201,6 +230,8 @@ export default defineComponent({
               onAfterEnter: (node: HTMLElement) => {
                 node.focus();
 
+                emit("initial-focus")
+
                 contentEntered.value = true
               },
               onBeforeLeave: () => {
@@ -211,11 +242,11 @@ export default defineComponent({
                   previousFocus.value.focus()
                 }
 
-                toggleHtmlClasses('remove')
-
                 removeFromOverlayState(id.value)
 
                 contentLeft.value = true
+
+                toggleHtmlClasses('remove')
               }
             },
             {
@@ -230,6 +261,7 @@ export default defineComponent({
                 }
 
                 const contentAttrs = {
+                  ref: contentRef,
                   ...aria,
                   ...attrs,
                   tabindex: modelSync.value ? '0' : '-1',
