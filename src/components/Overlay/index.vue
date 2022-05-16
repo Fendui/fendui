@@ -5,6 +5,7 @@ import type { LikeNumber } from "../../types"
 import { AnimType } from "ui-transition/dist/src/types"
 import TrapFocus from 'ui-trap-focus';
 import { uid } from "../../utils/uid";
+import eventKey from "../../utils/eventkey";
 
 export default defineComponent({
   name: componentName("Overlay"),
@@ -61,7 +62,8 @@ export default defineComponent({
       type: [Boolean, Object] as PropType<AnimType | boolean>,
       default: undefined
     },
-    modal: Boolean
+    modal: Boolean,
+    closeOnEsc: Boolean
   },
   emits: ["update:modelValue", "active:true", "active:false", "initial-focus"],
   setup(_props, { emit, slots, attrs, expose }) {
@@ -100,7 +102,6 @@ export default defineComponent({
     const toggle = (val?: boolean) => modelSync.value = (typeof val === 'boolean' ? val : !modelSync.value);
 
     const id = uid();
-
 
     const payload = computed(() => ({
       toggle,
@@ -164,9 +165,20 @@ export default defineComponent({
                   ...attrs,
                   tabindex: modelSync.value ? '0' : '-1',
                   onKeydown: (evt: KeyboardEvent) => {
+                    evt.stopPropagation()
+
                     new TrapFocus({
                       loop: true,
                     }).init(evt)
+                  },
+                  keyup: (evt: KeyboardEvent) => {
+                    evt.stopPropagation()
+
+                    if (props.value.closeOnEsc) {
+                      if (eventKey(evt) === 'esc') {
+                        toggle(false);
+                      }
+                    }
                   }
                 }
 
