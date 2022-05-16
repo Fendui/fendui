@@ -1,13 +1,18 @@
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, h, resolveComponent, Teleport } from "vue"
+import { defineComponent, PropType, ref, computed, h, resolveComponent, Teleport, HTMLAttributes } from "vue"
 import { componentName, optionalRootElement } from "../../utils"
 import type { LikeNumber } from "../../types"
 import { AnimType } from "ui-transition/dist/src/types"
 import TrapFocus from 'ui-trap-focus';
+import { uid } from "../../utils/uid";
 
 export default defineComponent({
   name: componentName("Overlay"),
   props: {
+    role: {
+      type: String as PropType<HTMLAttributes["role"] | undefined>,
+      default: undefined
+    },
     tag: {
       type: String as PropType<keyof HTMLElementTagNameMap>,
       default: undefined
@@ -55,10 +60,13 @@ export default defineComponent({
     transition: {
       type: [Boolean, Object] as PropType<AnimType | boolean>,
       default: undefined
-    }
+    },
+    modal: Boolean
   },
   emits: ["update:modelValue", "active:true", "active:false", "initial-focus"],
   setup(_props, { emit, slots, attrs, expose }) {
+    const previousFocus = ref<HTMLElement | null>();
+
     const props = computed(() => _props)
 
     const manualActive = ref(props.value.open || false);
@@ -91,63 +99,96 @@ export default defineComponent({
 
     const toggle = (val?: boolean) => modelSync.value = (typeof val === 'boolean' ? val : !modelSync.value);
 
+    const id = uid();
+
+
     const payload = computed(() => ({
       toggle,
       open: () => toggle(true),
       close: () => toggle(false),
       active: modelSync.value,
+      id
     }))
 
     expose(payload.value);
 
-    return () => [
-      slots.activator?.(payload.value),
 
-      h(Teleport, {
-        to: props.value.teleportTo
-      }, [
-        // @ts-ignore
-        h(resolveComponent("UiTransition"),
-          {
-            onAfterEnter: (node: HTMLElement) => {
-              node.focus();
+    const activatorId = `activator-${id}`
 
-              console.log(300);
+    return () => {
+      const activatorSlot = slots.activator?.(payload.value);
 
-            }
-          },
-          {
-            default: () => {
+      const activatorAttrs = {
+        id: activatorId,
+        'aria-controls': id,
+        // 'aria-haspopup': 'dialog',
+        'aria-expanded': modelSync.value,
+      }
 
-              const contentAttrs = {
-                ...attrs,
-                tabindex: modelSync.value ? '0' : '-1',
-                'aria-hidden': !modelSync.value,
-                onKeydown: (evt: KeyboardEvent) => {
-                  new TrapFocus({
-                    loop: true,
-                  }).init(evt)
+      return [
+        activatorSlot ? h(activatorSlot[0], {
+          ...activatorAttrs
+        }) : null,
+
+        h(Teleport, {
+          to: props.value.teleportTo
+        }, [
+          // @ts-ignore
+          h(resolveComponent("UiTransition"),
+            {
+              onBeforeEnter: () => {
+                previousFocus.value = document.activeElement as HTMLElement;
+              },
+              onAfterEnter: (node: HTMLElement) => {
+                node.focus();
+              },
+              onAfterLeave: () => {
+                if (props.value.restoreFocus && previousFocus.value) {
+                  previousFocus.value.focus()
                 }
               }
+            },
+            {
+              default: () => {
+                const aria = {
+                  role: props.value.role,
+                  id,
+                  'aria-modal': props.value.modal ? 'true' : undefined,
+                  // 'aria-describedby': modelSync.value ? describedby : undefined,
+                  'aria-labelledby': activatorId,
+                  'aria-hidden': !modelSync.value || undefined,
+                }
 
-              const tag = props.value.tag
+                const contentAttrs = {
+                  ...aria,
+                  ...attrs,
+                  tabindex: modelSync.value ? '0' : '-1',
+                  onKeydown: (evt: KeyboardEvent) => {
+                    new TrapFocus({
+                      loop: true,
+                    }).init(evt)
+                  }
+                }
 
-              return [
-                modelSync.value ?
-                  (tag ? h(tag, {
-                    ...contentAttrs,
-                  }, {
-                    default: () => [slots.default?.(payload.value)]
-                  }) :
-                    h(slots.default?.(payload.value)?.[0] || 'template', {
-                      ...contentAttrs
-                    })
-                  ) : null
-              ]
-            }
-          })
-      ])
-    ]
+                const tag = props.value.tag
+
+                return [
+                  modelSync.value ?
+                    (tag ? h(tag, {
+                      ...contentAttrs,
+                    }, {
+                      default: () => [slots.default?.(payload.value)]
+                    }) :
+                      h(slots.default?.(payload.value)?.[0] || 'template', {
+                        ...contentAttrs
+                      })
+                    ) : null
+                ]
+              }
+            })
+        ])
+      ]
+    }
   }
 })
 </script>
