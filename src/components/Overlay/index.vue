@@ -9,6 +9,7 @@ import eventKey from "../../utils/eventkey";
 
 export default defineComponent({
   name: componentName("Overlay"),
+  inheritAttrs: false,
   props: {
     role: {
       type: String as PropType<HTMLAttributes["role"] | undefined>,
@@ -63,7 +64,12 @@ export default defineComponent({
       default: undefined
     },
     modal: Boolean,
-    closeOnEsc: Boolean
+    closeOnEsc: Boolean,
+    scrollHtml: Boolean,
+    htmlActiveClass: {
+      type: String,
+      default: undefined
+    }
   },
   emits: ["update:modelValue", "active:true", "active:false", "initial-focus"],
   setup(_props, { emit, slots, attrs, expose }) {
@@ -113,6 +119,17 @@ export default defineComponent({
 
     expose(payload.value);
 
+    const toggleHtmlClasses = (action: 'add' | 'remove') => {
+      const { htmlActiveClass, scrollHtml } = props.value
+
+      if (htmlActiveClass || !scrollHtml) {
+        const html = document.documentElement || document.querySelector('html')
+
+        htmlActiveClass && html.classList[action](htmlActiveClass)
+
+        !scrollHtml && html.classList[action]('Overlay-active')
+      }
+    }
 
     const activatorId = `activator-${id}`
 
@@ -137,8 +154,11 @@ export default defineComponent({
           // @ts-ignore
           h(resolveComponent("UiTransition"),
             {
+              ...attrs,
               onBeforeEnter: () => {
                 previousFocus.value = document.activeElement as HTMLElement;
+
+                toggleHtmlClasses('add')
               },
               onAfterEnter: (node: HTMLElement) => {
                 node.focus();
@@ -147,6 +167,8 @@ export default defineComponent({
                 if (props.value.restoreFocus && previousFocus.value) {
                   previousFocus.value.focus()
                 }
+
+                toggleHtmlClasses('remove')
               }
             },
             {
@@ -167,19 +189,14 @@ export default defineComponent({
                   onKeydown: (evt: KeyboardEvent) => {
                     evt.stopPropagation()
 
-                    new TrapFocus({
-                      loop: true,
-                    }).init(evt)
-                  },
-                  keyup: (evt: KeyboardEvent) => {
-                    evt.stopPropagation()
-
-                    if (props.value.closeOnEsc) {
-                      if (eventKey(evt) === 'esc') {
-                        toggle(false);
-                      }
+                    if (eventKey(evt) === 'esc') {
+                      toggle(false)
+                    } else {
+                      new TrapFocus({
+                        loop: true,
+                      }).init(evt)
                     }
-                  }
+                  },
                 }
 
                 const tag = props.value.tag
@@ -204,3 +221,9 @@ export default defineComponent({
   }
 })
 </script>
+
+<style>
+.Overlay-active {
+  overflow: hidden;
+}
+</style>
