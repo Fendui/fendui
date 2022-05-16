@@ -146,7 +146,7 @@ const hover = ref(false)
 
   </div>
 
-  <Overlay teleport-to="#tt" tag="section">
+  <Overlay teleport-to="#tt" tag="section" class="dj">
     <template #activator="{ active, toggle }">
       <button @click="toggle">
         Overlay: {{ active }}
@@ -162,9 +162,17 @@ const hover = ref(false)
         Hii
       </div>
 
-      <button @click="toggle">
-        foo
-      </button>
+      <Overlay>
+        <template #activator="inner">
+          <button @click="inner.toggle">
+            foo
+          </button>
+        </template>
+
+        <div>
+          Hello world
+        </div>
+      </Overlay>
     </template>
   </Overlay>
 </template>

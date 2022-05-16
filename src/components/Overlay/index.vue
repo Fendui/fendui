@@ -1,11 +1,12 @@
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, h, resolveComponent, Teleport, HTMLAttributes } from "vue"
+import { defineComponent, PropType, ref, computed, h, resolveComponent, Teleport, HTMLAttributes, watch } from "vue"
 import { componentName, optionalRootElement } from "../../utils"
 import type { LikeNumber } from "../../types"
 import { AnimType } from "ui-transition/dist/src/types"
 import TrapFocus from 'ui-trap-focus';
 import { uid } from "../../utils/uid";
 import eventKey from "../../utils/eventkey";
+import state from "../../framework/state";
 
 export default defineComponent({
   name: componentName("Overlay"),
@@ -79,6 +80,9 @@ export default defineComponent({
 
     const manualActive = ref(props.value.open || false);
 
+    const contentEntered = ref(false);
+    const contentLeft = ref(false);
+
     const modelSync = computed({
       get() {
         if (typeof props.value.modelValue === 'boolean') {
@@ -107,14 +111,35 @@ export default defineComponent({
 
     const toggle = (val?: boolean) => modelSync.value = (typeof val === 'boolean' ? val : !modelSync.value);
 
-    const id = uid();
+    const id = ref(uid());
+
+    const removeFromOverlayState = (key: string) => {
+      const stateValue = { ...state.value };
+
+      stateValue.overlays.delete(key)
+
+      state.value = stateValue
+    }
+
+    const addToOverlayState = (key: string) => {
+      const stateValue = { ...state.value };
+
+      stateValue.overlays.set(key, (state.value.overlays.size + 1))
+
+      state.value = stateValue
+    }
+
+    watch(() => id.value, (newVal, oldVal) => {
+      removeFromOverlayState(oldVal)
+      addToOverlayState(newVal)
+    })
 
     const payload = computed(() => ({
       toggle,
       open: () => toggle(true),
       close: () => toggle(false),
       active: modelSync.value,
-      id
+      id: id.value
     }))
 
     expose(payload.value);
@@ -131,14 +156,18 @@ export default defineComponent({
       }
     }
 
-    const activatorId = `activator-${id}`
+    const activatorId = `activator-${id.value}`
+
+    const zIndex = computed(() => {
+      return props.value.zIndex || ((modelSync.value || !contentLeft.value) ? 1000 + state.value.overlays.size : undefined)
+    })
 
     return () => {
       const activatorSlot = slots.activator?.(payload.value);
 
       const activatorAttrs = {
         id: activatorId,
-        'aria-controls': id,
+        'aria-controls': id.value,
         // 'aria-haspopup': 'dialog',
         'aria-expanded': modelSync.value,
       }
@@ -156,12 +185,26 @@ export default defineComponent({
             {
               ...attrs,
               onBeforeEnter: () => {
+                contentLeft.value = false
+
+                contentEntered.value = false;
+
+                addToOverlayState(id.value)
+
                 previousFocus.value = document.activeElement as HTMLElement;
 
                 toggleHtmlClasses('add')
               },
+              onEnterCancelled: () => {
+                removeFromOverlayState(id.value)
+              },
               onAfterEnter: (node: HTMLElement) => {
                 node.focus();
+
+                contentEntered.value = true
+              },
+              onBeforeLeave: () => {
+                contentEntered.value = false;
               },
               onAfterLeave: () => {
                 if (props.value.restoreFocus && previousFocus.value) {
@@ -169,13 +212,17 @@ export default defineComponent({
                 }
 
                 toggleHtmlClasses('remove')
+
+                removeFromOverlayState(id.value)
+
+                contentLeft.value = true
               }
             },
             {
               default: () => {
                 const aria = {
                   role: props.value.role,
-                  id,
+                  id: id.value,
                   'aria-modal': props.value.modal ? 'true' : undefined,
                   // 'aria-describedby': modelSync.value ? describedby : undefined,
                   'aria-labelledby': activatorId,
@@ -186,6 +233,10 @@ export default defineComponent({
                   ...aria,
                   ...attrs,
                   tabindex: modelSync.value ? '0' : '-1',
+                  class: ['Overlay'],
+                  style: {
+                    '--z-index': zIndex.value
+                  },
                   onKeydown: (evt: KeyboardEvent) => {
                     evt.stopPropagation()
 
@@ -225,5 +276,11 @@ export default defineComponent({
 <style>
 .Overlay-active {
   overflow: hidden;
+}
+</style>
+
+<style scoped>
+.Overlay {
+  z-index: var(--z-index);
 }
 </style>
