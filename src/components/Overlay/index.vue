@@ -1,17 +1,22 @@
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, h, resolveComponent, Teleport, HTMLAttributes, watch } from "vue"
-import { componentName, getHtml } from "../../utils"
+import { defineComponent, PropType, ref, computed, h, resolveComponent, HTMLAttributes, watch, Transition, Teleport, ComponentPublicInstance } from "vue"
+import { componentName, getHtml, isHTML, removeEventPrefix } from "../../utils"
 import type { LikeNumber } from "../../types"
 import { AnimType } from "ui-transition/dist/src/types"
 import TrapFocus from 'ui-trap-focus';
 import { uid } from "../../utils/uid";
 import eventKey from "../../utils/eventkey";
 import state from "../../framework/state";
+import { cancelSleep, sleep } from "../../utils/sleep";
 
 export default defineComponent({
   name: componentName("Overlay"),
   inheritAttrs: false,
   props: {
+    zIndexOffset: {
+      type: [String, Number] as PropType<LikeNumber>,
+      default: 1000
+    },
     role: {
       type: String as PropType<HTMLAttributes["role"] | undefined>,
       default: undefined
@@ -27,10 +32,6 @@ export default defineComponent({
     modelValue: {
       type: Boolean,
       default: undefined
-    },
-    teleportTo: {
-      type: String,
-      default: 'body'
     },
     disabled: Boolean,
     route: {
@@ -71,13 +72,31 @@ export default defineComponent({
       type: String,
       default: undefined
     },
-    closeOnClickOutside: Boolean
+    closeOnClickOutside: Boolean,
+    uiTransition: {
+      type: Boolean, default: true
+    },
+    delayActive: {
+      type: [String, Number, Object] as PropType<LikeNumber | {
+        open?: LikeNumber;
+        close?: LikeNumber;
+        enter?: LikeNumber;
+        leave: LikeNumber;
+      }>,
+      default: () => 0
+    },
+    teleportTo: {
+      type: String,
+      default: 'body'
+    },
+    customTeleport: Boolean,
+    customTransition: Boolean,
   },
   emits: ["update:modelValue", "click:outside", "active:true", "active:false", "initial-focus"],
   setup(_props, { emit, slots, attrs, expose }) {
     const previousFocus = ref<HTMLElement | null>(null);
 
-    const contentRef = ref<HTMLElement | null>(null)
+    const contentRef = ref<HTMLElement | ComponentPublicInstance | null>(null)
 
     const props = computed(() => _props)
 
@@ -86,6 +105,32 @@ export default defineComponent({
     const contentEntered = ref(false);
 
     const contentLeft = ref(false);
+
+    const delayedActive = ref(false);
+
+    const delayActiveTimeoutId = ref(0);
+
+    const getActiveDelay = computed(() => {
+      const delay = props.value.delayActive;
+
+      const output = {
+        open: 0, close: 0
+      }
+
+      if (typeof delay === 'object') {
+        output.open = parseFloat(String((delay.open || delay.enter || 0)))
+        output.close = parseFloat(String((delay.close || delay.leave || 0)))
+      }
+
+      else {
+        const parsedDelay = parseFloat(String(delay));
+
+        output.open = parsedDelay;
+        output.close = parsedDelay;
+      }
+
+      return output
+    })
 
     const modelSync = computed({
       get() {
@@ -111,6 +156,24 @@ export default defineComponent({
           }
 
           emit(`active:${val}`)
+
+          const delayActive = getActiveDelay.value[val ? 'open' : 'close']
+
+          if (delayActive) {
+            if (delayActiveTimeoutId.value) {
+              cancelSleep(delayActiveTimeoutId.value)
+            }
+
+            sleep(delayActive, () => {
+              delayedActive.value = val;
+
+              delayActiveTimeoutId.value = 0
+            }).then(id => {
+              delayActiveTimeoutId.value = id;
+            })
+          } else {
+            delayedActive.value = val
+          }
         }
       }
     })
@@ -119,8 +182,17 @@ export default defineComponent({
 
     const id = ref(uid());
 
-    const clickAwayCB = (evt: MouseEvent) => {
-      if (contentEntered.value && contentRef.value && !contentRef.value.contains(evt.target as HTMLElement)) {
+    const activatorId = `activator-${id.value}`
+
+    const clickAwayCB = async (evt: MouseEvent) => {
+
+      if (!contentRef.value) { return }
+
+      const ref = '$el' in contentRef.value ? (contentRef.value.$el as HTMLElement) : contentRef.value as HTMLElement
+
+      if (contentEntered.value && isHTML(ref) && !ref.contains(evt.target as HTMLElement)) {
+        await sleep(32)
+
         emit("click:outside")
 
         props.value.closeOnClickOutside && toggle(false)
@@ -134,7 +206,7 @@ export default defineComponent({
 
       const stateValue = { ...state.value };
 
-      stateValue.overlays.delete(key)
+      delete stateValue.overlays[key]
 
       state.value = stateValue
     }
@@ -144,7 +216,7 @@ export default defineComponent({
 
       const stateValue = { ...state.value };
 
-      stateValue.overlays.set(key, (state.value.overlays.size + 1))
+      stateValue.overlays[key] = state.value.overlays.size + 1
 
       state.value = stateValue
 
@@ -158,8 +230,87 @@ export default defineComponent({
       addToOverlayState(newVal)
     })
 
+    const overlayKeys = computed(() => Object.keys(state.value.overlays))
+
+    const overlayIndex = computed(() => overlayKeys.value.indexOf(id.value))
+
+    const closestOverlay = computed(() => overlayKeys.value[overlayKeys.value.length - 1] === id.value)
+
     const zIndex = computed(() => {
-      return props.value.zIndex || ((modelSync.value || !contentLeft.value) ? 1000 + state.value.overlays.size : undefined)
+      if (props.value.zIndex) {
+        return props.value.zIndex
+      }
+
+      return (modelSync.value || !contentLeft.value) ? (
+        Number(props.value.zIndexOffset) + overlayIndex.value
+      ) : undefined
+    })
+
+    const transitionEvents = {
+      onBeforeEnter: () => {
+        contentLeft.value = false
+
+        contentEntered.value = false;
+
+        addToOverlayState(id.value)
+
+        previousFocus.value = document.activeElement as HTMLElement;
+
+        toggleHtmlClasses('add')
+      },
+      onEnterCancelled: () => {
+        removeFromOverlayState(id.value)
+      },
+      onAfterEnter: (node: HTMLElement) => {
+        node.focus();
+
+        emit("initial-focus")
+
+        contentEntered.value = true
+      },
+    }
+
+    const contentAttrs = computed(() => {
+      const contentAria = {
+        role: props.value.role,
+        id: id.value,
+        'aria-modal': props.value.modal ? 'true' : undefined,
+        // 'aria-describedby': modelSync.value ? describedby : undefined,
+        'aria-labelledby': activatorId,
+        'aria-hidden': !modelSync.value || undefined,
+      }
+
+      return {
+        ref: contentRef,
+        ...contentAria,
+        ...attrs,
+        tabindex: modelSync.value ? '0' : '-1',
+        onKeydown: (evt: KeyboardEvent) => {
+          evt.stopPropagation()
+
+          if (eventKey(evt) === 'esc') {
+            toggle(false)
+          } else {
+            new TrapFocus({
+              loop: true,
+            }).init(evt)
+          }
+        },
+        onVnodeBeforeUnmount: () => {
+          contentEntered.value = false;
+        },
+        onVnodeUnmounted: () => {
+          if (props.value.restoreFocus && previousFocus.value) {
+            previousFocus.value.focus()
+          }
+
+          removeFromOverlayState(id.value)
+
+          contentLeft.value = true
+
+          toggleHtmlClasses('remove')
+        }
+      }
     })
 
     const payload = computed(() => ({
@@ -168,13 +319,16 @@ export default defineComponent({
       close: () => toggle(false),
       active: modelSync.value,
       id: id.value,
-      zIndex: zIndex.value
+      zIndex: zIndex.value,
+      transitionEvents: removeEventPrefix(transitionEvents),
+      delayedActive: delayedActive.value && modelSync.value,
+      contentAttrs: contentAttrs.value
     }))
 
     expose(payload.value);
 
     const toggleHtmlClasses = (action: 'add' | 'remove') => {
-      if (action === 'remove' && state.value.overlays.size) {
+      if (action === 'remove' && state.value.overlays.size > 1) {
         return
       }
 
@@ -189,115 +343,57 @@ export default defineComponent({
       }
     }
 
-    const activatorId = `activator-${id.value}`
-
     return () => {
-      const activatorSlot = slots.activator?.(payload.value);
+      const activatorSlot = slots.activator?.({
+        ...payload.value,
+        attrs: {
+          id: activatorId,
+          'aria-controls': id.value,
+          // 'aria-haspopup': 'dialog',
+          'aria-expanded': modelSync.value,
+          'aria-hidden': modelSync.value ? 'true' : undefined,
+          'tabindex': modelSync.value ? '-1' : undefined
+        }
+      });
 
-      const activatorAttrs = {
-        id: activatorId,
-        'aria-controls': id.value,
-        // 'aria-haspopup': 'dialog',
-        'aria-expanded': modelSync.value,
+      const wrapper = () => {
+
+        const tag = props.value.tag
+
+        const contentPrivateAttrs = {
+          ...contentAttrs.value,
+          'data-fendui-overlay': '',
+          'data-overlay-index': String(overlayIndex.value),
+          'data-closest-overlay': closestOverlay.value ? '' : undefined,
+          style: {
+            '--z-index': zIndex.value
+          },
+          class: ['Overlay'],
+        }
+
+        const content = modelSync.value || delayedActive.value ?
+          (tag ? h(tag, contentPrivateAttrs, {
+            default: () => [slots.default?.(payload.value)]
+          }) :
+            h(slots.default?.(payload.value)?.[0] || 'template', contentPrivateAttrs)
+          ) : null
+
+        // @ts-ignore
+        return props.value.customTransition ? content : h(resolveComponent('UiTransition'), {
+          ...transitionEvents,
+          ...attrs
+        }, {
+          default: () => content
+        })
       }
 
       return [
-        activatorSlot ? h(activatorSlot[0], {
-          ...activatorAttrs
-        }) : null,
+        activatorSlot ? h(activatorSlot[0]) : null,
 
-        h(Teleport, {
+        props.value.customTeleport ? wrapper() : h(Teleport, {
           to: props.value.teleportTo
         }, [
-          // @ts-ignore
-          h(resolveComponent("UiTransition"),
-            {
-              ...attrs,
-              onBeforeEnter: () => {
-                contentLeft.value = false
-
-                contentEntered.value = false;
-
-                addToOverlayState(id.value)
-
-                previousFocus.value = document.activeElement as HTMLElement;
-
-                toggleHtmlClasses('add')
-              },
-              onEnterCancelled: () => {
-                removeFromOverlayState(id.value)
-              },
-              onAfterEnter: (node: HTMLElement) => {
-                node.focus();
-
-                emit("initial-focus")
-
-                contentEntered.value = true
-              },
-              onBeforeLeave: () => {
-                contentEntered.value = false;
-              },
-              onAfterLeave: () => {
-                if (props.value.restoreFocus && previousFocus.value) {
-                  previousFocus.value.focus()
-                }
-
-                removeFromOverlayState(id.value)
-
-                contentLeft.value = true
-
-                toggleHtmlClasses('remove')
-              }
-            },
-            {
-              default: () => {
-                const aria = {
-                  role: props.value.role,
-                  id: id.value,
-                  'aria-modal': props.value.modal ? 'true' : undefined,
-                  // 'aria-describedby': modelSync.value ? describedby : undefined,
-                  'aria-labelledby': activatorId,
-                  'aria-hidden': !modelSync.value || undefined,
-                }
-
-                const contentAttrs = {
-                  ref: contentRef,
-                  ...aria,
-                  ...attrs,
-                  tabindex: modelSync.value ? '0' : '-1',
-                  class: ['Overlay'],
-                  style: {
-                    '--z-index': zIndex.value
-                  },
-                  onKeydown: (evt: KeyboardEvent) => {
-                    evt.stopPropagation()
-
-                    if (eventKey(evt) === 'esc') {
-                      toggle(false)
-                    } else {
-                      new TrapFocus({
-                        loop: true,
-                      }).init(evt)
-                    }
-                  },
-                }
-
-                const tag = props.value.tag
-
-                return [
-                  modelSync.value ?
-                    (tag ? h(tag, {
-                      ...contentAttrs,
-                    }, {
-                      default: () => [slots.default?.(payload.value)]
-                    }) :
-                      h(slots.default?.(payload.value)?.[0] || 'template', {
-                        ...contentAttrs
-                      })
-                    ) : null
-                ]
-              }
-            })
+          wrapper()
         ])
       ]
     }
@@ -309,10 +405,8 @@ export default defineComponent({
 .Overlay-active {
   overflow: hidden;
 }
-</style>
 
-<style scoped>
-.Overlay {
+.Overlay[data-fendui-overlay] {
   z-index: var(--z-index);
 }
 </style>

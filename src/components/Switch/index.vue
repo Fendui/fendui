@@ -3,7 +3,8 @@
   <slot name="prepend" v-bind='payload' />
 
   <div role="checkbox" :aria-checked="isChecked ? 'true' : 'false'" class="Switch" :class="{ disabled, readonly }"
-    v-bind="$attrs" @click="toggle(!isChecked)">
+    v-bind="$attrs" @click="toggle(!isChecked)" @keydown.prevent.left="toggle(false)"
+    @keydown.prevent.right="toggle(true)">
     <!-- track -->
     <UiTransition :duration="300" spring="stiff">
       <div v-if="isChecked" class="track" :class="trackClass">

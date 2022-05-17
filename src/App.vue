@@ -146,33 +146,46 @@ const hover = ref(false)
 
   </div>
 
-  <Overlay teleport-to="#tt" tag="section" class="dj" closeOnClickOutside>
-    <template #activator="{ active, toggle }">
-      <button @click="toggle">
+  <Overlay class="dj" closeOnClickOutside :delay-active="{
+    enter: 16, leave: 800
+  }" custom-transition z-index-offset="10">
+    <template #activator="{ active, toggle, attrs }">
+      <button v-bind="attrs" @click.stop="toggle">
         Overlay: {{ active }}
       </button>
     </template>
 
-    <template #default="{ toggle }">
-      <div>
-        Hello world
+    <template #default="{ close, transitionEvents, delayedActive }">
+      <div style="position:fixed;top:0;left:0;width:100%;height:100%;">
+        <UiTransition>
+          <div v-if="delayedActive" @click="close"
+            style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgb(0,0,0,0.5)"></div>
+        </UiTransition>
+
+        <UiTransition v-on="transitionEvents" :config="['slideY', 'fade']">
+          <div v-if="delayedActive" tabindex="0" style="position:relative;z-index: 1;background-color: aliceblue;">
+            <div>
+              Hello world
+            </div>
+
+            <div>
+              Hii
+            </div>
+
+            <Overlay closeOnClickOutside>
+              <template #activator="inner">
+                <button @click.stop="inner.toggle">
+                  foo
+                </button>
+              </template>
+
+              <div>
+                Hello world
+              </div>
+            </Overlay>
+          </div>
+        </UiTransition>
       </div>
-
-      <div>
-        Hii
-      </div>
-
-      <Overlay>
-        <template #activator="inner">
-          <button @click="inner.toggle">
-            foo
-          </button>
-        </template>
-
-        <div>
-          Hello world
-        </div>
-      </Overlay>
     </template>
   </Overlay>
 </template>
