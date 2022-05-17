@@ -268,6 +268,11 @@ export default defineComponent({
 
         contentEntered.value = true
       },
+      onBeforeLeave: (node: HTMLElement) => {
+        if (props.value.restoreFocus && previousFocus.value) {
+          previousFocus.value.focus()
+        }
+      }
     }
 
     const contentAttrs = computed(() => {
@@ -300,9 +305,6 @@ export default defineComponent({
           contentEntered.value = false;
         },
         onVnodeUnmounted: () => {
-          if (props.value.restoreFocus && previousFocus.value) {
-            previousFocus.value.focus()
-          }
 
           removeFromOverlayState(id.value)
 

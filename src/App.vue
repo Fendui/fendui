@@ -142,9 +142,6 @@ const hover = ref(false)
     </Switch>
   </div>
 
-  <div id="tt">
-
-  </div>
 
   <Overlay class="dj" closeOnClickOutside :delay-active="{
     enter: 16, leave: 800
@@ -163,7 +160,7 @@ const hover = ref(false)
         </UiTransition>
 
         <UiTransition v-on="transitionEvents" :config="['slideY', 'fade']">
-          <div v-if="delayedActive" tabindex="0" style="position:relative;z-index: 1;background-color: aliceblue;">
+          <div v-if="delayedActive" tabindex="0" style="position:relative;background-color: aliceblue;">
             <div>
               Hello world
             </div>

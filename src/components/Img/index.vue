@@ -63,6 +63,10 @@ export default defineComponent({
     errorClass: {
       type: [String, Object, Array] as PropType<ClassName>,
       default: undefined
+    },
+    blurRadius: {
+      type: [String, Number] as PropType<LikeNumber>,
+      default: 10
     }
   },
   emits: ["load:start", "load:success", "load:error", "intersected"],
@@ -144,7 +148,7 @@ export default defineComponent({
 
         return {
           '--opacity': loadEffect === 'fade' ? (loading.value ? '0' : undefined) : undefined,
-          '--filter': loadEffect === 'blur' ? (loading.value ? 'blur(5px)' : undefined) : undefined,
+          '--filter': loadEffect === 'blur' ? (loading.value ? `blur(${Number(props.value.blurRadius)}px)` : undefined) : undefined,
           '--transition': `${loadEffect === 'fade' ? 'opacity' : 'filter'} ${convertToMilliSecond(loadEffectDuration)}ms ${loadEffectEase} ${convertToMilliSecond(loadEffectDelay)}ms`
         }
       }
