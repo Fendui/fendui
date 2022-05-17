@@ -4,13 +4,13 @@ export interface Config {
   root?: HTMLElement | null;
 }
 
-export interface Entry {
+export interface IntersectionEntry {
   inactive?: boolean;
   boundingClientRect: DOMRectReadOnly | undefined;
   intersectionRect: DOMRectReadOnly | undefined;
   target: Element | undefined;
   intersectionRatio: number;
-  ratio?: number;
+  ratio: number;
   isIntersecting: boolean;
   rootBounds: DOMRectReadOnly | null;
   time: number;

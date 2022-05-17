@@ -1,4 +1,4 @@
-import { Config, Entry } from "./types";
+import { Config, IntersectionEntry } from "./type";
 
 export const defaultConfig: Config = {
   threshold: 0,
@@ -7,7 +7,7 @@ export const defaultConfig: Config = {
 };
 
 // initial state of entry
-export const inactiveEntry: Entry = {
+export const inactiveEntry: IntersectionEntry = {
   inactive: true,
   boundingClientRect: undefined,
   intersectionRatio: 0,
@@ -16,6 +16,7 @@ export const inactiveEntry: Entry = {
   rootBounds: null,
   target: undefined,
   time: 0,
+  ratio: 0,
 };
 
 export const isHTML = (val: any) => val instanceof HTMLElement;

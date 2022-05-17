@@ -12,7 +12,7 @@ import {
   watch,
 } from "vue";
 import { componentName } from "../../utils";
-import { Config, Entry } from "./types";
+import { Config, IntersectionEntry } from "./type";
 import { defaultConfig, inactiveEntry, isHTML } from "./utils";
 
 export default defineComponent({
@@ -24,7 +24,7 @@ export default defineComponent({
       type: Object as PropType<Config>,
       default: () => defaultConfig,
     },
-    thresholdStep: {
+    thresholdLength: {
       type: Number,
       default: undefined
     },
@@ -34,9 +34,9 @@ export default defineComponent({
     //   observer won't happen if component isn't mounted.
     const isMounted = ref(false);
 
-    //   set initial state of entry to an object with inactive: true;
+    // set initial state of entry to an object with inactive: true;
     // used to check if Observer has started or not;
-    const entry = ref<Entry>(inactiveEntry);
+    const entry = ref<IntersectionEntry>(inactiveEntry);
 
     // the intersection observer class;
     const observer = ref<IntersectionObserver | null>(null);
@@ -79,10 +79,10 @@ export default defineComponent({
           : 1,
       };
 
-      const thresholdStep = props.value.thresholdStep
+      const thresholdLength = props.value.thresholdLength
 
-      if (thresholdStep) {
-        const thresholds = Array.from({ length: thresholdStep }, (_, i) => 1 / thresholdStep * i)
+      if (thresholdLength) {
+        const thresholds = Array.from({ length: thresholdLength }, (_, i) => 1 / thresholdLength * i)
 
         thresholds.push(1)
 
@@ -99,11 +99,12 @@ export default defineComponent({
     const intersectionCallback = (entries: IntersectionObserverEntry[]) => {
       for (const _entry of entries) {
         const setPayload = () => {
+          // @ts-ignore
           entry.value = _entry
 
           entry.value.ratio = _entry.intersectionRatio
 
-          emit("update:entry", _entry);
+          emit("update:entry", entry.value, observer.value);
         };
 
         if (props.value.once && _entry.isIntersecting) {
@@ -111,7 +112,7 @@ export default defineComponent({
 
           cleanup()
 
-          emit("once-intersected")
+          emit("once-intersected", entry.value)
         } else {
           setPayload()
         }

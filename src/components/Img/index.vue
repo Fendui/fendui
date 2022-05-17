@@ -5,6 +5,10 @@ import { LikeNumber, Duration, ClassName } from "../../types";
 import { componentName, convertToMilliSecond, srOnlyStyle } from "../../utils";
 import Intersection from '../Intersection/index.vue'
 
+const scoping = {
+  'data-fendui-img': '',
+}
+
 export default defineComponent({
   name: componentName("Img"),
   props: {
@@ -76,15 +80,26 @@ export default defineComponent({
     const loaded = ref(false);
     const error = ref(false);
 
+    const imgKey = ref(0)
+
     const intersected = ref(false);
 
     const props = computed(() => _props)
+
+    const refresh = () => {
+      imgKey.value = imgKey.value + 1;
+
+      error.value = false
+      loading.value = false
+      loaded.value = false
+    }
 
     const payload = computed(() => ({
       loaded: loaded.value,
       error: error.value,
       loading: loading.value,
-      intersected: intersected.value
+      intersected: intersected.value,
+      refresh
     }))
 
     const heightAndWidth = {
@@ -164,8 +179,10 @@ export default defineComponent({
     return () => {
       if (props.value.backgroundImage) {
         return wrapper(h(props.value.tag, {
+          key: imgKey.value,
           ...attrs,
           class: ['Img', loadClasses.value],
+          ...scoping,
           style: {
             role: 'img',
             ...ariaLabel,
@@ -178,6 +195,7 @@ export default defineComponent({
             slots.default?.(payload.value),
 
             h("img", {
+              key: imgKey.value,
               ...loadEvents,
               src: props.value.src,
               alt: props.value.alt,
@@ -188,11 +206,13 @@ export default defineComponent({
         }))
       } return wrapper(
         h('img', {
+          key: imgKey.value,
           src: props.value.src,
           alt: props.value.alt,
           height: props.value.height,
           width: props.value.width,
           class: ['Img', loadClasses.value],
+          ...scoping,
           style: {
             ...heightAndWidth,
             ...enterAnimation.value
@@ -204,8 +224,8 @@ export default defineComponent({
 })
 </script>
 
-<style scoped>
-.Img {
+<style>
+.Img[data-fendui-img] {
   transition: var(--transition);
   opacity: var(--opacity);
   filter: var(--filter)

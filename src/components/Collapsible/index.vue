@@ -13,6 +13,10 @@ import type { LikeNumber, ClassName } from '../../types'
 import type { TransitionProp } from './type'
 // import state from "../../framework/state";
 
+const scoping = {
+  'data-fendui-collapsible': ''
+}
+
 export default defineComponent({
   name: componentName("Collapsible"),
   props: {
@@ -197,6 +201,7 @@ export default defineComponent({
       return h(
         props.value.tag,
         {
+          ...scoping,
           class: [
             "Collapsible",
             {
@@ -263,15 +268,15 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
-.Collapsible {
+<style>
+.Collapsible[data-fendui-collapsible] {
   transition: var(--transition);
   height: var(--height);
   max-height: var(--max-height);
   overflow: hidden;
 }
 
-.Collapsible.will-change {
+.Collapsible.will-change[data-fendui-collapsible] {
   will-change: height;
 }
 </style>

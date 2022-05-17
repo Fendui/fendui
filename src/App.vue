@@ -12,6 +12,8 @@ import Intersection from './components/Intersection/index.vue';
 import Img from './components/Img/index.vue';
 import Switch from './components/Switch/index.vue';
 import Overlay from './components/Overlay/index.vue';
+import Sheet from './components/Sheet/index.vue';
+import autofocus from './framework/directives/autofocus';
 
 const toggled = ref(false)
 const delayedToggle = ref(false)
@@ -19,6 +21,18 @@ const group = ref([])
 const focus = ref(false)
 const hover = ref(false)
 </script>
+
+<script lang="ts">
+import { defineComponent } from 'vue';
+
+export default defineComponent({
+  name: "app",
+  directives: {
+    autofocus
+  }
+})
+</script>
+
 
 <template>
   <div>
@@ -112,7 +126,7 @@ const hover = ref(false)
     </Group>
   </div>
 
-  <Intersection #default="{ isIntersecting, ratio }" :threshold-step="300">
+  <Intersection #default="{ isIntersecting, ratio }" :threshold-length="300">
     <div style="height: 500px;margin-top: 500px;margin-bottom: 500px;" class="box">
       {{ ratio }}
 
@@ -123,8 +137,8 @@ const hover = ref(false)
   </Intersection>
 
   <Img load-effect="fade" height="200" src="https://picsum.photos/500/500" alt="Hello">
-  <template #prepend="{ loading, loaded, error }">
-    <div style="margin-top: 100px">
+  <template #prepend="{ loading, loaded, error, refresh }">
+    <div style="margin-top: 100px" @click="refresh">
       loading: {{ loading }}
       loaded: {{ loaded }}
       error: {{ error }}
@@ -143,24 +157,22 @@ const hover = ref(false)
   </div>
 
 
-  <Overlay class="dj" closeOnClickOutside :delay-active="{
-    enter: 16, leave: 800
-  }" custom-transition z-index-offset="10">
+  <Overlay closeOnClickOutside z-index-offset="10" always-render custom-transition>
     <template #activator="{ active, toggle, attrs }">
       <button v-bind="attrs" @click.stop="toggle">
         Overlay: {{ active }}
       </button>
     </template>
 
-    <template #default="{ close, transitionEvents, delayedActive }">
+    <template #default="{ close, transitionEvents, active }">
       <div style="position:fixed;top:0;left:0;width:100%;height:100%;">
-        <UiTransition>
-          <div v-if="delayedActive" @click="close"
+        <UiTransition appear>
+          <div v-if="active" @click="close"
             style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgb(0,0,0,0.5)"></div>
         </UiTransition>
 
-        <UiTransition v-on="transitionEvents" :config="['slideY', 'fade']">
-          <div v-if="delayedActive" tabindex="0" style="position:relative;background-color: aliceblue;">
+        <UiTransition appear v-on="transitionEvents" :config="['slideY', 'fade']">
+          <div v-if="active" tabindex="0" style="position:relative;background-color: aliceblue;">
             <div>
               Hello world
             </div>
@@ -171,7 +183,7 @@ const hover = ref(false)
 
             <Overlay closeOnClickOutside>
               <template #activator="inner">
-                <button @click.stop="inner.toggle">
+                <button v-autofocus @click.stop="inner.toggle">
                   foo
                 </button>
               </template>
@@ -185,6 +197,30 @@ const hover = ref(false)
       </div>
     </template>
   </Overlay>
+
+  <Sheet from="bottom" snap-mandatory>
+    <template #activator="{ active, toggle, attrs }">
+      <button v-bind="attrs" @click="toggle">
+        Sheet {{ active }}
+      </button>
+    </template>
+
+    <template #prepend="{ ratio, active }">
+      <UiTransition :config="{ enter: 'fade', leave: `fade(0, ${ratio})` }">
+        <div v-if="active" style="background-color: rgb(0,0,0,0.6); inset:0; position:fixed; pointer-events: none;"
+          :style="{ opacity: ratio }">
+        </div>
+      </UiTransition>
+    </template>
+
+    <template #default="{ transitionEvents, active }">
+      <UiTransition v-on="transitionEvents" :config="['slideY(100)', 'fade']">
+        <div v-if="active" style="background: white; height:90vh;">
+          Hello world
+        </div>
+      </UiTransition>
+    </template>
+  </Sheet>
 </template>
 
 <style>

@@ -4,6 +4,7 @@ import state from "./framework/state";
 import { cancelSleep, sleep } from "./utils/sleep";
 import uiTransition from "ui-transition";
 import { InstallOptions } from "ui-transition/dist/src/types";
+import "../assets/utilities.css";
 
 let timeout = 0;
 

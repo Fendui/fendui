@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, h, resolveComponent, HTMLAttributes, watch, Transition, Teleport, ComponentPublicInstance } from "vue"
+import { defineComponent, PropType, ref, computed, h, resolveComponent, HTMLAttributes, watch, Teleport, ComponentPublicInstance, withDirectives, vShow } from "vue"
 import { componentName, getHtml, isHTML, removeEventPrefix } from "../../utils"
 import type { LikeNumber } from "../../types"
 import { AnimType } from "ui-transition/dist/src/types"
@@ -8,6 +8,24 @@ import { uid } from "../../utils/uid";
 import eventKey from "../../utils/eventkey";
 import state from "../../framework/state";
 import { cancelSleep, sleep } from "../../utils/sleep";
+
+const scoping = {
+  'data-fendui-overlay': '',
+}
+
+export interface OverlayPayload {
+  toggle: () => void;
+  open: () => void;
+  close: () => void;
+  active: boolean;
+  id: string;
+  zIndex: LikeNumber | undefined;
+  transitionEvents: Record<string, Function>;
+  delayedActive: boolean;
+  contentAttrs: Record<string, any>;
+  afterEnter: boolean;
+  afterLeave: boolean
+}
 
 export default defineComponent({
   name: componentName("Overlay"),
@@ -33,6 +51,7 @@ export default defineComponent({
       type: Boolean,
       default: undefined
     },
+    // will retain current state. Open or close won't work.
     disabled: Boolean,
     route: {
       type: String,
@@ -53,6 +72,7 @@ export default defineComponent({
       default: undefined,
     },
     alwaysRender: Boolean,
+    alwaysShow: Boolean,
     tabFoward: {
       type: Function as PropType<(evt?: KeyboardEvent) => boolean>,
       default: undefined
@@ -81,7 +101,7 @@ export default defineComponent({
         open?: LikeNumber;
         close?: LikeNumber;
         enter?: LikeNumber;
-        leave: LikeNumber;
+        leave?: LikeNumber;
       }>,
       default: () => 0
     },
@@ -89,10 +109,9 @@ export default defineComponent({
       type: String,
       default: 'body'
     },
-    customTeleport: Boolean,
     customTransition: Boolean,
   },
-  emits: ["update:modelValue", "click:outside", "active:true", "active:false", "initial-focus"],
+  emits: ["update:modelValue", "click:outside", "active:true", "active:false", "initial-focus", "delayed-active:true", "delayed-active:false", "restore-focus"],
   setup(_props, { emit, slots, attrs, expose }) {
     const previousFocus = ref<HTMLElement | null>(null);
 
@@ -101,10 +120,6 @@ export default defineComponent({
     const props = computed(() => _props)
 
     const manualActive = ref(props.value.open || false);
-
-    const contentEntered = ref(false);
-
-    const contentLeft = ref(false);
 
     const delayedActive = ref(false);
 
@@ -146,7 +161,7 @@ export default defineComponent({
       },
 
       set(val: boolean) {
-        if (typeof val === 'boolean') {
+        if (typeof val === 'boolean' && !props.value.disabled) {
           if (typeof props.value.modelValue === 'boolean') {
             emit('update:modelValue', val)
           }
@@ -168,6 +183,8 @@ export default defineComponent({
               delayedActive.value = val;
 
               delayActiveTimeoutId.value = 0
+
+              emit(`delayed-active:${val}`)
             }).then(id => {
               delayActiveTimeoutId.value = id;
             })
@@ -177,6 +194,10 @@ export default defineComponent({
         }
       }
     })
+
+    const contentEntered = ref(modelSync.value === true);
+
+    const contentLeft = ref(modelSync.value === false);
 
     const toggle = (val?: boolean) => modelSync.value = (typeof val === 'boolean' ? val : !modelSync.value);
 
@@ -246,8 +267,8 @@ export default defineComponent({
       ) : undefined
     })
 
-    const transitionEvents = {
-      onBeforeEnter: () => {
+    const transitionEnterEvents = {
+      before: (node: HTMLElement) => {
         contentLeft.value = false
 
         contentEntered.value = false;
@@ -257,22 +278,73 @@ export default defineComponent({
         previousFocus.value = document.activeElement as HTMLElement;
 
         toggleHtmlClasses('add')
+
+        sleep(1, () => {
+          if (!props.value.focusContent) {
+            return
+          }
+
+          // ## focus on overlay
+          // get the closest .Overlay, since it'll always exist.
+          // check if the activeElement is in the overlay,
+          // if it isnt, focus.
+
+          const closestOverlay = node.closest('.Overlay') as HTMLElement | null
+
+          if (closestOverlay) {
+            if (!closestOverlay?.contains(document.activeElement)) {
+              requestAnimationFrame(() => {
+                closestOverlay.focus?.()
+
+                emit("initial-focus")
+              })
+            }
+          }
+        })
       },
-      onEnterCancelled: () => {
+      cancelled: () => {
         removeFromOverlayState(id.value)
       },
-      onAfterEnter: (node: HTMLElement) => {
-        node.focus();
-
-        emit("initial-focus")
+      after: () => {
+        if (!modelSync.value) { return }
 
         contentEntered.value = true
       },
-      onBeforeLeave: (node: HTMLElement) => {
+    }
+
+    const transitionLeaveEvents = {
+      before: () => {
+        contentEntered.value = false;
+      },
+      after: () => {
+        if (modelSync.value) { return }
+
+        removeFromOverlayState(id.value)
+
+        toggleHtmlClasses('remove')
+
+        contentLeft.value = true
+      }
+    }
+
+    const transitionEvents = {
+      onBeforeEnter: transitionEnterEvents.before,
+      // onEnter: transitionEnterEvents.enter,
+      onEnterCancelled: transitionEnterEvents.cancelled,
+      onAfterEnter: transitionEnterEvents.after,
+      onBeforeAppear: transitionEnterEvents.before,
+      onAppearCancelled: transitionEnterEvents.cancelled,
+      onAfterAppear: transitionEnterEvents.after,
+      onBeforeLeave: () => {
         if (props.value.restoreFocus && previousFocus.value) {
           previousFocus.value.focus()
+
+          emit("restore-focus")
         }
-      }
+
+        transitionLeaveEvents.before()
+      },
+      onAfterLeave: transitionLeaveEvents.after
     }
 
     const contentAttrs = computed(() => {
@@ -301,21 +373,12 @@ export default defineComponent({
             }).init(evt)
           }
         },
-        onVnodeBeforeUnmount: () => {
-          contentEntered.value = false;
-        },
-        onVnodeUnmounted: () => {
-
-          removeFromOverlayState(id.value)
-
-          contentLeft.value = true
-
-          toggleHtmlClasses('remove')
-        }
+        onVnodeBeforeUnmount: transitionLeaveEvents.before,
+        onVnodeUnmounted: transitionLeaveEvents.after
       }
     })
 
-    const payload = computed(() => ({
+    const payload = computed<OverlayPayload>(() => ({
       toggle,
       open: () => toggle(true),
       close: () => toggle(false),
@@ -324,7 +387,9 @@ export default defineComponent({
       zIndex: zIndex.value,
       transitionEvents: removeEventPrefix(transitionEvents),
       delayedActive: delayedActive.value && modelSync.value,
-      contentAttrs: contentAttrs.value
+      contentAttrs: contentAttrs.value,
+      afterEnter: contentEntered.value,
+      afterLeave: contentLeft.value
     }))
 
     expose(payload.value);
@@ -364,35 +429,46 @@ export default defineComponent({
 
         const contentPrivateAttrs = {
           ...contentAttrs.value,
-          'data-fendui-overlay': '',
-          'data-overlay-index': String(overlayIndex.value),
-          'data-closest-overlay': closestOverlay.value ? '' : undefined,
-          style: {
-            '--z-index': zIndex.value
-          },
-          class: ['Overlay'],
+          ...scoping,
+          ...(modelSync.value ? {
+            'data-overlay-index': String(overlayIndex.value),
+            'data-closest-overlay': closestOverlay.value ? '' : undefined,
+          } : {}),
+          style: Object.assign({
+            '--z-index': zIndex.value,
+          }, attrs.style || {}),
+          class: ['Overlay', attrs.class],
         }
 
-        const content = modelSync.value || delayedActive.value ?
-          (tag ? h(tag, contentPrivateAttrs, {
+        const getContent = () => {
+          const alwaysRender = props.value.alwaysRender
+
+          const show = modelSync.value || delayedActive.value
+
+          const content = tag ? h(tag, contentPrivateAttrs, {
             default: () => [slots.default?.(payload.value)]
           }) :
             h(slots.default?.(payload.value)?.[0] || 'template', contentPrivateAttrs)
-          ) : null
+
+
+          return alwaysRender ? withDirectives(content, [
+            [vShow, props.value.alwaysShow ? true : !contentLeft.value]
+          ]) : (show ? content : null)
+        }
 
         // @ts-ignore
-        return props.value.customTransition ? content : h(resolveComponent('UiTransition'), {
+        return [props.value.customTransition ? getContent() : h(resolveComponent('UiTransition'), {
           ...transitionEvents,
           ...attrs
         }, {
-          default: () => content
-        })
+          default: () => getContent()
+        })]
       }
 
       return [
         activatorSlot ? h(activatorSlot[0]) : null,
 
-        props.value.customTeleport ? wrapper() : h(Teleport, {
+        h(Teleport, {
           to: props.value.teleportTo
         }, [
           wrapper()
@@ -404,6 +480,7 @@ export default defineComponent({
 </script>
 
 <style>
+/* for html element */
 .Overlay-active {
   overflow: hidden;
 }
