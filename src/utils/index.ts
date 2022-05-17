@@ -257,3 +257,42 @@ export const srOnlyStyle = {
   "white-space": "nowrap",
   "border-width": "0",
 };
+
+/**
+ * @name getHtml
+ * @description
+ * Returns html element
+ * **/
+export function getHtml() {
+  return document.documentElement || document.querySelector("html");
+}
+
+type EventProperty = Record<string, Function>;
+/**
+ * @name removeEventPrefix
+ * @description
+ * Removes the 'on' prefix for events.
+ * @param {EventProperty} events
+ * @returns {EventProperty}
+ * **/
+export function removeEventPrefix(events: EventProperty): EventProperty {
+  const _events: EventProperty = {};
+
+  let key: keyof EventProperty;
+
+  for (key in events) {
+    const firstThreeChar = /^on[A-Z]/;
+
+    if (firstThreeChar.test(key)) {
+      const formattedKey = key.replace(firstThreeChar, (x) =>
+        x[2].toLowerCase()
+      );
+
+      _events[formattedKey] = events[key];
+    } else {
+      _events[key] = events[key];
+    }
+  }
+
+  return _events;
+}

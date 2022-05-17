@@ -2,11 +2,12 @@
 <template>
   <slot name="prepend" v-bind='payload' />
 
-  <div role="checkbox" :aria-checked="isChecked ? 'true' : 'false'" class="Switch" :class="{ disabled, readonly }"
-    v-bind="$attrs" @click="toggle(!isChecked)">
+  <div data-fendui-switch role="checkbox" :aria-checked="isChecked ? 'true' : 'false'" class="Switch"
+    :class="{ disabled, readonly }" v-bind="$attrs" @click="toggle(!isChecked)" @keydown.prevent.left="toggle(false)"
+    @keydown.prevent.right="toggle(true)">
     <!-- track -->
     <UiTransition :duration="300" spring="stiff">
-      <div v-if="isChecked" class="track" :class="trackClass">
+      <div v-if="isChecked" data-fendui-switch class="track" :class="trackClass">
         <slot name="track" v-bind="payload" />
       </div>
     </UiTransition>
@@ -16,13 +17,13 @@
       leave: false,
       enter: isChecked ? `slideX(0, ${activeTranslate}, 'px')` : `slideX(${activeTranslate}, 0, 'px')`,
     }" retain-final-style :duration="300" spring="stiff">
-      <div :key="`${isChecked}`" :class="[
+      <div :key="`${isChecked}`" data-fendui-switch :class="[
         'thumb', thumbClass
       ]" :style="`--transalate-x: ${activeTranslate}px`">
         <slot name="thumb" v-bind='payload' />
 
-        <input ref="input" :id="inputAttrs.id || id || payload.id" v-bind="inputAttrs" type="checkbox" class="input"
-          :checked="isChecked" :disabled="disabled" :readonly="readonly" @input="onInput"
+        <input ref="input" :id="inputAttrs.id || id || payload.id" data-fendui-switch v-bind="inputAttrs"
+          type="checkbox" class="input" :checked="isChecked" :disabled="disabled" :readonly="readonly" @input="onInput"
           @vnode-mounted="triggerAutofocus" />
       </div>
     </UiTransition>
@@ -129,8 +130,8 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
-.Switch {
+<style>
+.Switch[data-fendui-switch] {
   width: var(--width, 42px);
   height: var(--height, 24px);
   background: var(--background, rgb(195, 195, 195));
@@ -142,11 +143,11 @@ export default defineComponent({
   border: 1px solid rgb(0, 0, 0, 0.2)
 }
 
-.Switch:not(.disabled):not(.readonly) {
+.Switch[data-fendui-switch]:not(.disabled):not(.readonly) {
   cursor: pointer;
 }
 
-.track {
+.track[data-fendui-switch] {
   background: var(--track-color, red);
   position: absolute;
   border-radius: inherit;
@@ -154,7 +155,7 @@ export default defineComponent({
   height: 100%
 }
 
-.thumb {
+.thumb[data-fendui-switch] {
   width: var(--thumb-width, 22px);
   height: var(--thumb-height, 22px);
   border-radius: var(--thumb-height, 22px);
@@ -167,12 +168,12 @@ export default defineComponent({
   transition: transform 200ms;
 }
 
-.Switch.checked .thumb {
+.Switch.checked[data-fendui-switch] .thumb {
   transform: translate3d(14px, 0, 0);
 }
 
 
-.input {
+.input[data-fendui-switch] {
   position: absolute;
   width: 1px;
   height: 1px;

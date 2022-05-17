@@ -4,10 +4,16 @@ let calls = 0;
  * @name uid
  * @description
  * Returns a unique Id
+ * @param { string } [prefix] - Prefix for the uid generated. Leave as an empty string for no prefix. Leaving undefined will default to 'uid-' as a prefix
  * @returns { string }
  * **/
-export function uid(): string {
+export function uid(prefix?: string): string {
   calls += 0.1;
 
-  return btoa(`${Date.now()}-${performance.now()}-${calls}`.replace(/=/g, "_"));
+  const _prefix = typeof prefix === "string" ? prefix : "uid-";
+
+  return `${_prefix}${(performance.now() + calls).toString(36)}`.replace(
+    /\./g,
+    "_"
+  );
 }
