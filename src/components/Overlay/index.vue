@@ -88,6 +88,7 @@ export default defineComponent({
     modal: Boolean,
     closeOnEsc: Boolean,
     scrollHtml: Boolean,
+    disableTeleport: Boolean,
     htmlActiveClass: {
       type: String,
       default: undefined
@@ -469,7 +470,8 @@ export default defineComponent({
         activatorSlot ? h(activatorSlot[0]) : null,
 
         h(Teleport, {
-          to: props.value.teleportTo
+          to: props.value.teleportTo,
+          disabled: props.value.disableTeleport
         }, [
           wrapper()
         ])
