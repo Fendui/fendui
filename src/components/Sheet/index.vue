@@ -41,7 +41,8 @@ export default defineComponent({
       type: Number,
       default: 0.01,
     },
-    disableRatio: Boolean
+    disableRatio: Boolean,
+    disableSwipe: Boolean
   },
   emits: ["update:modelValue", "active:true", "active:false", "update:ratio"],
   setup(_props, { slots, emit, attrs }) {
@@ -148,7 +149,8 @@ export default defineComponent({
             class: ['Sheet hide-scrollbar', getFrom.value, {
               'snap-mandatory': props.value.snapMandatory,
               'snap-proximity': !props.value.snapMandatory,
-              'swipe-content-only': props.value.swipeContentOnly
+              'swipe-content-only': props.value.swipeContentOnly,
+              'disable-swipe': props.value.disableSwipe
             }, attrs.class],
 
             style: Object.assign({
@@ -255,8 +257,11 @@ export default defineComponent({
   left: 0;
   right: 0;
   bottom: 0;
-  overflow: auto;
   display: flex;
+}
+
+.Sheet[data-fendui-sheet]:not(.disable-swipe) {
+  overflow: auto;
   overscroll-behavior: contain;
 }
 
@@ -270,23 +275,23 @@ export default defineComponent({
   flex-wrap: wrap;
 }
 
-.Sheet.snap-mandatory.bottom[data-fendui-sheet],
-.Sheet.snap-mandatory.top[data-fendui-sheet] {
+.Sheet.snap-mandatory.bottom[data-fendui-sheet]:not(.disable-swipe),
+.Sheet.snap-mandatory.top[data-fendui-sheet]:not(.disable-swipe) {
   scroll-snap-type: y mandatory;
 }
 
-.Sheet.snap-mandatory.left[data-fendui-sheet],
-.Sheet.snap-mandatory.right[data-fendui-sheet] {
+.Sheet.snap-mandatory.left[data-fendui-sheet]:not(.disable-swipe),
+.Sheet.snap-mandatory.right[data-fendui-sheet]:not(.disable-swipe) {
   scroll-snap-type: x mandatory;
 }
 
-.Sheet.snap-proximity.bottom[data-fendui-sheet],
-.Sheet.snap-proximity.top[data-fendui-sheet] {
+.Sheet.snap-proximity.bottom[data-fendui-sheet]:not(.disable-swipe),
+.Sheet.snap-proximity.top[data-fendui-sheet]:not(.disable-swipe) {
   scroll-snap-type: y proximity;
 }
 
-.Sheet.snap-proximity.left[data-fendui-sheet],
-.Sheet.snap-proximity.right[data-fendui-sheet] {
+.Sheet.snap-proximity.left[data-fendui-sheet]:not(.disable-swipe),
+.Sheet.snap-proximity.right[data-fendui-sheet]:not(.disable-swipe) {
   scroll-snap-type: x proximity;
 }
 
