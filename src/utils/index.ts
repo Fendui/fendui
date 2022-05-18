@@ -296,3 +296,42 @@ export function removeEventPrefix(events: EventProperty): EventProperty {
 
   return _events;
 }
+
+/**
+ * @name addEventPrefix
+ * @description
+ * Adds the 'on' prefix for events.
+ * @param {EventProperty} events
+ * @returns {EventProperty}
+ * **/
+export function addEventPrefix(events: EventProperty): EventProperty {
+  const _events: EventProperty = {};
+
+  let key: keyof EventProperty;
+
+  for (key in events) {
+    const firstChar = /^[a-z]/;
+
+    if (firstChar.test(key) && !/^on[A-Z]/.test(key)) {
+      const formattedKey = `on${key[0].toUpperCase()}${key.slice(1)}`;
+
+      _events[formattedKey] = events[key];
+    } else {
+      _events[key] = events[key];
+    }
+  }
+
+  return _events;
+}
+
+/**
+ * @name stepper
+ * @description
+ * Interporlates from, to, and ratio values to form a progress moving from the 'from' value to the 'to' value in respect to the ratio.
+ * @param { number } from - Value to interpolate from
+ * @param { number } to - Value to interpolate to
+ * @param { number } ratio - Progress of interpolation. This should ultimately be a value between 0 and 1
+ * @returns `number` Between 0 and 1
+ * **/
+export const stepper = (from: number, to: number, ratio: number): number =>
+  (from - to) * ratio + to;

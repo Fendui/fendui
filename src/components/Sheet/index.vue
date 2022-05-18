@@ -15,7 +15,6 @@ const scoping = {
 
 export default defineComponent({
   name: componentName("Sheet"),
-  inheritAttrs: false,
   components: { Overlay, Intersection },
   props: {
     modelValue: {
@@ -50,7 +49,7 @@ export default defineComponent({
 
     const rootRef = ref<HTMLElement | null>(null);
 
-    const manualActive = ref(false)
+    const manualModel = ref(false)
 
     const rootScrolled = ref(false);
 
@@ -68,7 +67,7 @@ export default defineComponent({
           return props.value.open
         }
 
-        return manualActive.value
+        return manualModel.value
       },
 
       set(val: boolean) {
@@ -80,7 +79,7 @@ export default defineComponent({
           }
 
           if (!(typeof props.value.open === 'boolean')) {
-            manualActive.value = val
+            manualModel.value = val
           }
 
           emit(`active:${val}`)
@@ -100,6 +99,7 @@ export default defineComponent({
 
     return () => {
       return h(Overlay, {
+        ...attrs,
         modelValue: modelSync.value,
         delayActive: {
           open: 16,
@@ -144,7 +144,6 @@ export default defineComponent({
 
           return h('div', {
             ref: rootRef,
-            ...attrs,
             ...scoping,
             class: ['Sheet hide-scrollbar', getFrom.value, {
               'snap-mandatory': props.value.snapMandatory,

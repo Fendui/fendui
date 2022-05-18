@@ -13,7 +13,12 @@ import Img from './components/Img/index.vue';
 import Switch from './components/Switch/index.vue';
 import Overlay from './components/Overlay/index.vue';
 import Sheet from './components/Sheet/index.vue';
+import Toast from './components/Toast/index.vue';
 import autofocus from './framework/directives/autofocus';
+import Countdown from './components/Countdown/index.vue';
+// import Countdown_ from "./utils/countdown"
+
+// window.Countdown = Countdown_
 
 const toggled = ref(false)
 const delayedToggle = ref(false)
@@ -221,6 +226,46 @@ export default defineComponent({
       </UiTransition>
     </template>
   </Sheet>
+
+  <Toast duration="15s">
+    <template #activator="{ active, toggle }">
+      <button @click="toggle">
+        Toast: {{ active }}
+      </button>
+    </template>
+
+    <template #default="{ hover, countdown }">
+      <div>
+        TOAST! {{ hover }} {{ countdown }}
+
+        <div style="background:red;width:100vw;height:2px; margin: 1rem 0;transform-origin: left;" :style="{
+          transform: `scale3d(${Math.abs(countdown.value - 1)},1,1)`
+        }"></div>
+      </div>
+    </template>
+  </Toast>
+
+  <Countdown duration="1s" #default="{ value, start, pause, stop, restart, touched, step }">
+    <div>
+      {{ touched ? step(0, 200).toFixed(2) : 0 }}
+    </div>
+
+    <button @click="start">
+      start
+    </button>
+
+    <button @click="pause">
+      pause
+    </button>
+
+    <button @click="stop">
+      stop
+    </button>
+
+    <button @click="restart">
+      restart
+    </button>
+  </Countdown>
 </template>
 
 <style>

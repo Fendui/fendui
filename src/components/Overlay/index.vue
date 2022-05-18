@@ -111,6 +111,10 @@ export default defineComponent({
       default: 'body'
     },
     customTransition: Boolean,
+    trapFocus: {
+      type: Boolean,
+      default: true
+    }
   },
   emits: ["update:modelValue", "click:outside", "active:true", "active:false", "initial-focus", "delayed-active:true", "delayed-active:false", "restore-focus"],
   setup(_props, { emit, slots, attrs, expose }) {
@@ -120,7 +124,7 @@ export default defineComponent({
 
     const props = computed(() => _props)
 
-    const manualActive = ref(props.value.open || false);
+    const manualModel = ref(props.value.open || false);
 
     const delayedActive = ref(false);
 
@@ -158,7 +162,7 @@ export default defineComponent({
           return props.value.open
         }
 
-        return manualActive.value
+        return manualModel.value
       },
 
       set(val: boolean) {
@@ -168,7 +172,7 @@ export default defineComponent({
           }
 
           if (!(typeof props.value.open === 'boolean')) {
-            manualActive.value = val
+            manualModel.value = val
           }
 
           emit(`active:${val}`)
@@ -368,7 +372,7 @@ export default defineComponent({
 
           if (eventKey(evt) === 'esc') {
             toggle(false)
-          } else {
+          } else if (props.value.trapFocus) {
             new TrapFocus({
               loop: true,
             }).init(evt)

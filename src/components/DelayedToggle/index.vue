@@ -33,14 +33,14 @@ export default defineComponent({
 
     const timeoutId = ref<null | number>(null)
 
-    const manualActive = ref(false)
+    const manualModel = ref(false)
 
     const noVModel = computed(() => typeof props.value.modelValue === 'undefined')
 
     const modelSync = computed({
       get() {
         if (noVModel.value) {
-          return manualActive.value
+          return manualModel.value
         }
 
         return props.value.modelValue as boolean
@@ -51,7 +51,7 @@ export default defineComponent({
             emit("update:modelValue", val)
           }
 
-          manualActive.value = val
+          manualModel.value = val
         }
       }
     })
