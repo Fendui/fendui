@@ -169,7 +169,7 @@ describe("Group component", () => {
 
   test("Initial prop", async () => {
     const wrapper = mount(Group, {
-      props: { initial: [99], multiple: true },
+      props: { initial: 99, multiple: true },
       slots: {
         default: `<template #default="{ isActive, active, add, remove, toggle }">
                     <div id="view-port"> {{ active.length ? active : 'empty' }} </div>

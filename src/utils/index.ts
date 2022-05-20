@@ -13,12 +13,12 @@ type OfType =
   | "array";
 
 /**
- * @name ofType
+ * @name getType
  * @description
  * Returns type of parameter. Distinguishing arrays from objects
  * @returns {OfType}
  * **/
-export function ofType(x: any): OfType {
+export function getType(x: any): OfType {
   if (Array.isArray(x)) {
     return "array";
   }

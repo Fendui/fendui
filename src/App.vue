@@ -16,6 +16,13 @@ import Sheet from './components/Sheet/index.vue';
 import Toast from './components/Toast/index.vue';
 import autofocus from './framework/directives/autofocus';
 import Countdown from './components/Countdown/index.vue';
+import Radio from './components/Radio/index.vue';
+import Checkbox from './components/Checkbox/index.vue';
+import Id from './components/Id/index.vue';
+import TrapFocus from 'ui-trap-focus';
+import eventKey from './utils/eventkey';
+import RadioGroup from './components/RadioGroup/index.vue';
+import CheckboxGroup from './components/CheckboxGroup/index.vue';
 // import Countdown_ from "./utils/countdown"
 
 // window.Countdown = Countdown_
@@ -25,6 +32,18 @@ const delayedToggle = ref(false)
 const group = ref([])
 const focus = ref(false)
 const hover = ref(false)
+
+const keydown = (evt: KeyboardEvent) => {
+  new TrapFocus({
+    forward: (evt) => /arrow_down|arrow_right/.test(eventKey(evt)),
+    backward: (evt) => /arrow_up|arrow_left/.test(eventKey(evt)),
+    loop: true
+  }).init(evt).then(el => {
+    if (el) {
+      el.click()
+    }
+  })
+}
 </script>
 
 <script lang="ts">
@@ -247,7 +266,7 @@ export default defineComponent({
 
   <Countdown duration="1s" #default="{ value, start, pause, stop, restart, touched, step }">
     <div>
-      {{ touched ? step(0, 200).toFixed(2) : 0 }}
+      {{ touched ? step(0, 100).toFixed(0) : 0 }}
     </div>
 
     <button @click="start">
@@ -266,6 +285,71 @@ export default defineComponent({
       restart
     </button>
   </Countdown>
+
+  <div style="display:flex">
+
+    <Radio>
+      <template #prepend="{ id, active }">
+        <label :for="id">
+          Radio label {{ active }}
+        </label>
+      </template>
+
+      <template #default="{ active }">
+        <div style="height:16px;width:16px;border-radius:16px;background:red;transition: .4s;"
+          :style="{ transform: `scale3d(${active ? 1 : 0}, ${active ? 1 : 0}, 1)` }"></div>
+      </template>
+    </Radio>
+
+    <Checkbox>
+      <template #append="{ id, active }">
+        <label :for="id">
+          Checkbox label {{ active }}
+        </label>
+      </template>
+
+      <template #default="{ active }">
+        <div style="height:16px;width:16px;border-radius:16px;background:red;transition: .4s;"
+          :style="{ transform: `scale3d(${active ? 1 : 0}, ${active ? 1 : 0}, 1)` }"></div>
+      </template>
+    </Checkbox>
+
+    <RadioGroup :option="[1, 2, 3]" #default="{ items }" :initial="1">
+      <Radio v-for="{ attrs, item } in items" :key="item" v-bind="attrs">
+        <template #prepend="{ id, active }">
+          <label :for="id">
+            Radio label {{ active }} {{ item }}
+          </label>
+        </template>
+
+        <template #default="{ active }">
+          <div style="height:16px;width:16px;border-radius:16px;background:red;transition: .4s;"
+            :style="{ transform: `scale3d(${active ? 1 : 0}, ${active ? 1 : 0}, 1)` }"></div>
+        </template>
+      </Radio>
+    </RadioGroup>
+
+    <CheckboxGroup :option="[1, 2, 3]" #default="{ items, intermediate, selectAll, reset, allChecked }" :initial="1">
+      <button @click="allChecked ? reset() : selectAll()">
+        {{ allChecked ? 'Clear' : 'Select all' }}
+      </button>
+
+      <Checkbox v-for="{ attrs, item } in items" :key="item" v-bind="attrs">
+        <template #prepend="{ id, active }">
+          <label :for="id">
+            Checkbox label {{ active }} {{ item }}
+          </label>
+        </template>
+
+        <template #default="{ active }">
+          <div style="height:16px;width:16px;border-radius:16px;background:red;transition: .4s;"
+            :style="{ transform: `scale3d(${active ? 1 : 0}, ${active ? 1 : 0}, 1)` }"></div>
+        </template>
+      </Checkbox>
+    </CheckboxGroup>
+
+
+  </div>
 </template>
 
 <style>

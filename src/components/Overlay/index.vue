@@ -2,7 +2,6 @@
 import { defineComponent, PropType, ref, computed, h, resolveComponent, HTMLAttributes, watch, Teleport, ComponentPublicInstance, withDirectives, vShow } from "vue"
 import { componentName, getHtml, isHTML, removeEventPrefix } from "../../utils"
 import type { LikeNumber } from "../../types"
-import { AnimType } from "ui-transition/dist/src/types"
 import TrapFocus from 'ui-trap-focus';
 import { uid } from "../../utils/uid";
 import eventKey from "../../utils/eventkey";
@@ -82,7 +81,7 @@ export default defineComponent({
       default: undefined,
     },
     transition: {
-      type: [Boolean, Object] as PropType<AnimType | boolean>,
+      type: [Boolean, Object] as PropType<Record<string, any> | boolean>,
       default: undefined
     },
     modal: Boolean,
