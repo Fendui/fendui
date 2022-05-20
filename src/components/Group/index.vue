@@ -1,12 +1,13 @@
 <script lang="ts">
-import { computed, defineComponent, h, nextTick, PropType, ref } from "vue";
+import { computed, defineComponent, nextTick, PropType, ref } from "vue";
 import { componentName, distinctArray, optionalRootElement } from "../../utils";
+import type { GroupPayload } from './type'
 
 export default defineComponent({
   name: componentName('Group'),
   props: {
     modelValue: {
-      type: Array as PropType<any[]>,
+      type: Array as PropType<(number | string | object)[]>,
       default: undefined
     },
     tag: {
@@ -17,7 +18,12 @@ export default defineComponent({
     multiple: Boolean,
     disabled: Boolean,
     allowRepeated: Boolean,
-    initial: Array,
+    initial: {
+      type: [
+        Array, Object, Number, String
+      ] as PropType<any>,
+      default: undefined
+    },
   },
   emits: ["update:modelValue", "toggle:add", "toggle:remove", "clear-all"],
   setup(p, { emit, slots, attrs }) {
@@ -118,7 +124,7 @@ export default defineComponent({
       emit("toggle:remove", id);
     }
 
-    const clearAll = async (id: any) => {
+    const clearAll = async () => {
       selected.value = []
 
       await nextTick()
@@ -134,15 +140,15 @@ export default defineComponent({
       } else add(val)
     }
 
-    if (props.value.modelValue) {
+    if (props.value.mandatory && props.value.modelValue) {
       add(props.value.modelValue);
     }
 
-    if (props.value.initial?.length) {
+    if (typeof props.value.initial !== 'undefined') {
       add(props.value.initial);
     }
 
-    const payload = computed(() => ({
+    const payload = computed<GroupPayload>(() => ({
       add,
       remove,
       toggle,

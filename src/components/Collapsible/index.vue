@@ -61,7 +61,7 @@ export default defineComponent({
       forceNoTransition: boolean;
       hideHeight: boolean;
       exitingHeight: null | string | number;
-      manualActive: boolean;
+      manualModel: boolean;
     }>({
       transitionState: null,
       contentHeight: undefined,
@@ -71,7 +71,7 @@ export default defineComponent({
       hideHeight: false,
       exitingHeight: null,
       manualVmodel: props.value.open || false,
-      manualActive: props.value.open || false
+      manualModel: props.value.open || false
     });
 
     if (!data.exitingHeight) {
@@ -104,7 +104,7 @@ export default defineComponent({
           data.manualVmodel = val;
 
           nextTick().then(() => {
-            data.manualActive = false;
+            data.manualModel = false;
           });
         }
       }

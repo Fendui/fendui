@@ -23,8 +23,8 @@
         <slot name="thumb" v-bind='payload' />
 
         <input ref="input" :id="inputAttrs.id || id || payload.id" data-fendui-switch v-bind="inputAttrs"
-          type="checkbox" class="input" :checked="isChecked" :disabled="disabled" :readonly="readonly" @input="onInput"
-          @vnode-mounted="triggerAutofocus" />
+          type="checkbox" :class="{ 'sr-only': !showInput }" :checked="isChecked" :disabled="disabled"
+          :readonly="readonly" v-autofocus="autofocus" @input="onInput" />
       </div>
     </UiTransition>
   </div>
@@ -37,10 +37,12 @@
 import { computed, defineComponent, PropType, ref, VNode } from "vue";
 import { ClassName } from "../../types";
 import { uid } from "../../utils/uid";
+import autofocus from "../../framework/directives/autofocus";
 
 export default defineComponent({
   name: "Switch",
   emits: ["update:modelValue"],
+  directives: { autofocus },
   props: {
     modelValue: {
       type: Boolean,
@@ -57,6 +59,7 @@ export default defineComponent({
     disabled: Boolean,
     autofocus: Boolean,
     readonly: Boolean,
+    showInput: Boolean,
     activeTranslate: {
       type: Number,
       default: 18
@@ -170,20 +173,5 @@ export default defineComponent({
 
 .Switch.checked[data-fendui-switch] .thumb {
   transform: translate3d(14px, 0, 0);
-}
-
-
-.input[data-fendui-switch] {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-  left: 50%;
-  top: 50%;
 }
 </style>
