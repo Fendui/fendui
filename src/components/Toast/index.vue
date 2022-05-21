@@ -3,7 +3,7 @@ import { computed } from "@vue/reactivity";
 import { defineComponent, h, PropType, ref } from "vue";
 import { componentName, addEventPrefix } from "../../utils";
 import Overlay from "../Overlay/index.vue";
-import type { OverlayPayload } from "../Overlay/index.vue";
+import type { OverlayPayload } from "../Overlay/type";
 import Hover from "../Hover/index.vue";
 import Countdown, { CountdownPayload } from "../Countdown/index.vue";
 import { Duration } from "../../types";
@@ -79,7 +79,7 @@ export default defineComponent({
         teleportTo: props.value.teleportTo,
         tag: 'section'
       }, {
-        activator: slots.activator,
+        trigger: slots.trigger,
         default: (slotProps: OverlayPayload) => {
           const defaultSlot = (hoverProps: Record<string, any>) => slots.default?.({
             ...hoverProps,

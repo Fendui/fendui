@@ -9,10 +9,18 @@ import { Duration } from "../types";
  * @returns { Promise<number> }
  * **/
 export async function sleep(
-  _duration: Duration,
-  callback?: () => void
+  _duration?: Duration | (() => void),
+  _callback?: () => void
 ): Promise<number> {
-  const duration = (_duration >= 0 ? _duration : 0) as number;
+  const duration = (
+    typeof _duration === "function"
+      ? 0
+      : (_duration as Duration) >= 0
+      ? _duration
+      : 0
+  ) as number;
+
+  const callback = typeof _duration === "function" ? _duration : _callback;
 
   if (duration === Infinity) {
     return Promise.reject("Duration must be less than Infinity");

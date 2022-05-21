@@ -126,15 +126,21 @@ app.use(uiTransition, {
       },
     }),
 
-    slideX: (from = 100, to = 0, unit = "%") => ({
+    slideX: (from = 100, to = 0, unit = "%", previous = "") => ({
       frame: (step, phase) => {
         const build = {
           enter: {
-            transform: `translate3d(${step(from, to)}${unit}, 0, 0)`,
+            transform: `${previous ? `${previous}` : ""}translate3d(${step(
+              from,
+              to
+            )}${unit}, 0, 0)`,
           },
 
           leave: {
-            transform: `translate3d(${step(to, from)}${unit}, 0, 0)`,
+            transform: `${previous ? `${previous}` : ""}translate3d(${step(
+              to,
+              from
+            )}${unit}, 0, 0)`,
           },
         };
 

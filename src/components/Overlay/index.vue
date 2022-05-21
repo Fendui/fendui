@@ -7,33 +7,16 @@ import { uid } from "../../utils/uid";
 import eventKey from "../../utils/eventkey";
 import state from "../../framework/state";
 import { cancelSleep, sleep } from "../../utils/sleep";
+import { OverlayPayload } from "./type";
 
 const scoping = {
   'data-fendui-overlay': '',
-}
-
-export interface OverlayPayload {
-  toggle: () => void;
-  open: () => void;
-  close: () => void;
-  active: boolean;
-  id: string;
-  zIndex: LikeNumber | undefined;
-  transitionEvents: Record<string, Function>;
-  delayedActive: boolean;
-  contentAttrs: Record<string, any>;
-  afterEnter: boolean;
-  afterLeave: boolean
 }
 
 export default defineComponent({
   name: componentName("Overlay"),
   inheritAttrs: false,
   props: {
-    zIndexOffset: {
-      type: [String, Number] as PropType<LikeNumber>,
-      default: 1000
-    },
     role: {
       type: String as PropType<HTMLAttributes["role"] | undefined>,
       default: undefined
@@ -52,11 +35,6 @@ export default defineComponent({
     },
     // will retain current state. Open or close won't work.
     disabled: Boolean,
-    route: {
-      type: String,
-      // $route.fullPath to show overlay
-      default: undefined
-    },
     restoreScroll: Boolean,
     restoreFocus: {
       type: Boolean,
@@ -72,18 +50,6 @@ export default defineComponent({
     },
     alwaysRender: Boolean,
     alwaysShow: Boolean,
-    tabFoward: {
-      type: Function as PropType<(evt?: KeyboardEvent) => boolean>,
-      default: undefined
-    },
-    tabBackward: {
-      type: Function as PropType<(evt?: KeyboardEvent) => boolean>,
-      default: undefined,
-    },
-    transition: {
-      type: [Boolean, Object] as PropType<Record<string, any> | boolean>,
-      default: undefined
-    },
     modal: Boolean,
     closeOnEsc: Boolean,
     scrollHtml: Boolean,
@@ -93,9 +59,6 @@ export default defineComponent({
       default: undefined
     },
     closeOnClickOutside: Boolean,
-    uiTransition: {
-      type: Boolean, default: true
-    },
     delayActive: {
       type: [String, Number, Object] as PropType<LikeNumber | {
         open?: LikeNumber;
@@ -115,7 +78,20 @@ export default defineComponent({
       default: true
     }
   },
-  emits: ["update:modelValue", "click:outside", "active:true", "active:false", "initial-focus", "delayed-active:true", "delayed-active:false", "restore-focus"],
+
+  emits: [
+    "update:modelValue",
+    "click:outside",
+    "active:true",
+    "active:false",
+    "initial-focus",
+    "delayed-active:true",
+    "delayed-active:false",
+    "restore-focus",
+    "after-enter",
+    "after-leave",
+  ],
+
   setup(_props, { emit, slots, attrs, expose }) {
     const previousFocus = ref<HTMLElement | null>(null);
 
@@ -166,6 +142,11 @@ export default defineComponent({
 
       set(val: boolean) {
         if (typeof val === 'boolean' && !props.value.disabled) {
+          // don't open if overlay is closing
+          if (val && !contentLeft.value) {
+            return
+          }
+
           if (typeof props.value.modelValue === 'boolean') {
             emit('update:modelValue', val)
           }
@@ -199,15 +180,23 @@ export default defineComponent({
       }
     })
 
+    // modelSync weirdly gets set without calling the setter. 
+    // This watcher resolves that.
+    watch(() => modelSync.value, (newVal) => {
+      modelSync.value = newVal
+    })
+
     const contentEntered = ref(modelSync.value === true);
 
     const contentLeft = ref(modelSync.value === false);
 
-    const toggle = (val?: boolean) => modelSync.value = (typeof val === 'boolean' ? val : !modelSync.value);
+    const toggle = (val?: boolean) => {
+      modelSync.value = (typeof val === 'boolean' ? val : !modelSync.value)
+    };
 
     const id = ref(uid());
 
-    const activatorId = `activator-${id.value}`
+    const triggerId = `trigger-${id.value}`
 
     const clickAwayCB = async (evt: MouseEvent) => {
 
@@ -247,7 +236,7 @@ export default defineComponent({
 
       const html = getHtml();
 
-      html.addEventListener('click', clickAwayCB)
+      html.addEventListener('click', clickAwayCB,)
     }
 
     watch(() => id.value, (newVal, oldVal) => {
@@ -267,12 +256,13 @@ export default defineComponent({
       }
 
       return (modelSync.value || !contentLeft.value) ? (
-        Number(props.value.zIndexOffset) + overlayIndex.value
+        Number(props.value.zIndex || 0) + overlayIndex.value
       ) : undefined
     })
 
     const transitionEnterEvents = {
       before: (node: HTMLElement) => {
+
         contentLeft.value = false
 
         contentEntered.value = false;
@@ -307,18 +297,23 @@ export default defineComponent({
         })
       },
       cancelled: () => {
+        modelSync.value = false
         removeFromOverlayState(id.value)
       },
       after: () => {
         if (!modelSync.value) { return }
 
         contentEntered.value = true
+
+        emit("after-enter")
       },
     }
 
     const transitionLeaveEvents = {
       before: () => {
         contentEntered.value = false;
+
+        contentLeft.value = false;
       },
       after: () => {
         if (modelSync.value) { return }
@@ -327,7 +322,9 @@ export default defineComponent({
 
         toggleHtmlClasses('remove')
 
-        contentLeft.value = true
+        contentLeft.value = true;
+
+        emit("after-leave")
       }
     }
 
@@ -348,8 +345,21 @@ export default defineComponent({
 
         transitionLeaveEvents.before()
       },
-      onAfterLeave: transitionLeaveEvents.after
+      leaveCancelled: () => {
+        modelSync.value = true
+        removeFromOverlayState(id.value)
+
+        contentEntered.value = true
+        contentLeft.value = false
+      },
+      onAfterLeave: () => {
+        transitionLeaveEvents.after();
+      }
     }
+
+    const getContentEntered = computed(() => {
+      return contentEntered.value && modelSync.value
+    })
 
     const contentAttrs = computed(() => {
       const contentAria = {
@@ -357,7 +367,7 @@ export default defineComponent({
         id: id.value,
         'aria-modal': props.value.modal ? 'true' : undefined,
         // 'aria-describedby': modelSync.value ? describedby : undefined,
-        'aria-labelledby': activatorId,
+        'aria-labelledby': triggerId,
         'aria-hidden': !modelSync.value || undefined,
       }
 
@@ -366,17 +376,23 @@ export default defineComponent({
         ...contentAria,
         ...attrs,
         tabindex: modelSync.value ? '0' : '-1',
-        onKeydown: (evt: KeyboardEvent) => {
-          evt.stopPropagation()
+        ...(
+          getContentEntered.value ?
+            {
+              onKeydown: (evt: KeyboardEvent) => {
+                evt.stopPropagation()
 
-          if (eventKey(evt) === 'esc') {
-            toggle(false)
-          } else if (props.value.trapFocus) {
-            new TrapFocus({
-              loop: true,
-            }).init(evt)
-          }
-        },
+                if (eventKey(evt) === 'esc') {
+                  toggle(false)
+                } else if (props.value.trapFocus) {
+                  new TrapFocus({
+                    loop: true,
+                  }).init(evt)
+                }
+              }
+            }
+            : {}
+        ),
         onVnodeBeforeUnmount: transitionLeaveEvents.before,
         onVnodeUnmounted: transitionLeaveEvents.after
       }
@@ -415,10 +431,10 @@ export default defineComponent({
     }
 
     return () => {
-      const activatorSlot = slots.activator?.({
+      const triggerSlot = slots.trigger?.({
         ...payload.value,
         attrs: {
-          id: activatorId,
+          id: triggerId,
           'aria-controls': id.value,
           // 'aria-haspopup': 'dialog',
           'aria-expanded': modelSync.value,
@@ -442,6 +458,21 @@ export default defineComponent({
             '--z-index': zIndex.value,
           }, attrs.style || {}),
           class: ['Overlay', attrs.class],
+
+          ...(
+            getContentEntered.value ?
+              {
+                onBlur: (evt: FocusEvent) => {
+                  const { relatedTarget, currentTarget } = evt
+                  const containsNextFocus =
+                    Boolean(relatedTarget && (currentTarget as HTMLElement).contains(relatedTarget as HTMLElement))
+
+                  if (props.value.trapFocus && !containsNextFocus && getContentEntered.value) {
+                    (currentTarget as HTMLElement).focus()
+                  }
+                },
+              } : {}
+          )
         }
 
         const getContent = () => {
@@ -470,7 +501,7 @@ export default defineComponent({
       }
 
       return [
-        activatorSlot ? h(activatorSlot[0]) : null,
+        triggerSlot,
 
         h(Teleport, {
           to: props.value.teleportTo,

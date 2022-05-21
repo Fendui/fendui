@@ -10,6 +10,7 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@popperjs/core": "^2.11.5",
     "@vue/test-utils": "^2.0.0-rc.18",
     "ui-transition": "^0.0.222",
     "ui-trap-focus": "^0.0.30",

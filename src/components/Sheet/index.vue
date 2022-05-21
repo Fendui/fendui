@@ -1,7 +1,8 @@
 <script lang="ts">
 import { defineComponent, h, PropType } from "vue";
 import { componentName } from "../../utils";
-import Overlay, { OverlayPayload } from "../Overlay/index.vue";
+import Overlay from "../Overlay/index.vue";
+import { OverlayPayload } from "../Overlay/type"
 import Intersection from "../Intersection/index.vue";
 import { computed, ref } from "@vue/reactivity";
 import { sleep } from "../../utils/sleep";
@@ -130,7 +131,7 @@ export default defineComponent({
           }
         }
       }, {
-        activator: (slotProps: OverlayPayload) => slots?.activator?.({
+        trigger: (slotProps: OverlayPayload) => slots?.trigger?.({
           ...slotProps,
           ...payload.value
         }),
@@ -160,7 +161,7 @@ export default defineComponent({
                 pointerEvents: (!slotProps.delayedActive) ? 'none' : undefined
               })
             }, attrs.style || {}, props.value.disableRatio ? {} : {
-              '--ratio': String(ratio.value)
+              '--ratio': String(ratio.value || '')
             })
           }, [
             slots?.prepend?.(slotProps),

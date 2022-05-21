@@ -18,11 +18,9 @@ import autofocus from './framework/directives/autofocus';
 import Countdown from './components/Countdown/index.vue';
 import Radio from './components/Radio/index.vue';
 import Checkbox from './components/Checkbox/index.vue';
-import Id from './components/Id/index.vue';
-import TrapFocus from 'ui-trap-focus';
-import eventKey from './utils/eventkey';
 import RadioGroup from './components/RadioGroup/index.vue';
 import CheckboxGroup from './components/CheckboxGroup/index.vue';
+import Position from './components/Position/index.vue';
 // import Countdown_ from "./utils/countdown"
 
 // window.Countdown = Countdown_
@@ -33,17 +31,9 @@ const group = ref([])
 const focus = ref(false)
 const hover = ref(false)
 
-const keydown = (evt: KeyboardEvent) => {
-  new TrapFocus({
-    forward: (evt) => /arrow_down|arrow_right/.test(eventKey(evt)),
-    backward: (evt) => /arrow_up|arrow_left/.test(eventKey(evt)),
-    loop: true
-  }).init(evt).then(el => {
-    if (el) {
-      el.click()
-    }
-  })
-}
+const position = ref('bottom')
+
+const popperId = ref('id1')
 </script>
 
 <script lang="ts">
@@ -182,7 +172,7 @@ export default defineComponent({
 
 
   <Overlay closeOnClickOutside z-index-offset="10" always-render custom-transition>
-    <template #activator="{ active, toggle, attrs }">
+    <template #trigger="{ active, toggle, attrs }">
       <button v-bind="attrs" @click.stop="toggle">
         Overlay: {{ active }}
       </button>
@@ -206,7 +196,7 @@ export default defineComponent({
             </div>
 
             <Overlay closeOnClickOutside>
-              <template #activator="inner">
+              <template #trigger="inner">
                 <button v-autofocus @click.stop="inner.toggle">
                   foo
                 </button>
@@ -223,7 +213,7 @@ export default defineComponent({
   </Overlay>
 
   <Sheet from="bottom" snap-mandatory>
-    <template #activator="{ active, toggle, attrs }">
+    <template #trigger="{ active, toggle, attrs }">
       <button v-bind="attrs" @click="toggle">
         Sheet {{ active }}
       </button>
@@ -247,7 +237,7 @@ export default defineComponent({
   </Sheet>
 
   <Toast duration="15s">
-    <template #activator="{ active, toggle }">
+    <template #trigger="{ active, toggle }">
       <button @click="toggle">
         Toast: {{ active }}
       </button>
@@ -286,8 +276,7 @@ export default defineComponent({
     </button>
   </Countdown>
 
-  <div style="display:flex">
-
+  <div style="display:flex; margin: 3rem 0">
     <Radio>
       <template #prepend="{ id, active }">
         <label :for="id">
@@ -347,8 +336,42 @@ export default defineComponent({
         </template>
       </Checkbox>
     </CheckboxGroup>
+  </div>
 
+  <button id="id1">
+    Hello popper
+  </button>
 
+  <button id="id2">
+    Hello popper
+  </button>
+
+  {{ position }}
+
+  <input v-model.lazy="position">
+
+  <input v-model.lazy="popperId">
+
+  <div style="margin: 4rem 0">
+    <Position :trigger="`#${popperId}`" :placement="position" :offset="[0, 10]" flip>
+      <template #trigger="{ ref, toggle, setPosition }">
+        <button @click.prevent="toggle" @mouseenter="setPosition">
+          Hello popper trigger
+        </button>
+      </template>
+
+      <template #default="{ transitionEvents, contentAttrs, active, ref, arrowAttrs }">
+        <UiTransition v-on="transitionEvents" :config="[`scale(0.75)`, 'fade']" :spring="{
+          enter: 'wobbly', leave: 'default'
+        }">
+          <div v-if="active" :ref="ref" style="position:relative; background-color: black;color: white;">
+            Positioned!
+
+            <div v-bind="arrowAttrs" style="--size: 8px; background: #000"></div>
+          </div>
+        </UiTransition>
+      </template>
+    </Position>
   </div>
 </template>
 

@@ -1,10 +1,10 @@
 <script lang="ts">
 import { computed, ref } from "@vue/reactivity";
 import { defineComponent, h, HTMLAttributes, PropType } from "vue";
+import TrapFocus from 'ui-trap-focus';
 import { componentName, getType } from "../../utils";
 import eventKey from "../../utils/eventkey";
 import Group from "../Group/index.vue"
-import TrapFocus from 'ui-trap-focus';
 import { GroupPayload } from "../Group/type";
 import { RadioGroupPayload } from './type'
 
