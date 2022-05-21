@@ -70,6 +70,7 @@ export default defineComponent({
         modelSync.value = val;
       },
       tag: props.value.tag,
+      mandatory: true,
     }, {
       default: (slotProps: GroupPayload) => {
         const { isActive, add } = slotProps;

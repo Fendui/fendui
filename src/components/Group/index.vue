@@ -141,7 +141,7 @@ export default defineComponent({
     }
 
     if (props.value.mandatory && props.value.modelValue) {
-      add(props.value.modelValue);
+      add([props.value.modelValue].flat()[0]);
     }
 
     if (typeof props.value.initial !== 'undefined') {
