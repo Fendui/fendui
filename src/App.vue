@@ -21,6 +21,7 @@ import Checkbox from './components/Checkbox/index.vue';
 import RadioGroup from './components/RadioGroup/index.vue';
 import CheckboxGroup from './components/CheckboxGroup/index.vue';
 import Position from './components/Position/index.vue';
+import Tab from './components/Tab/index.vue';
 // import Countdown_ from "./utils/countdown"
 
 // window.Countdown = Countdown_
@@ -373,6 +374,32 @@ export default defineComponent({
       </template>
     </Position>
   </div>
+
+  <div>
+    <Tab :option="[{ title: 'Hello' }, { title: 'Adele' }, { title: 'Biggie' }]" vertical loop>
+      <template #default="{ items, select }">
+        <div v-for="{ item, attrs, active } in items" :key="item.title" v-bind="attrs" @click="select(item)">
+          {{ item.title }}:{{ active }}
+        </div>
+      </template>
+
+      <template #content="{ isActive, items }">
+        <UiTransition :config="['scale(0.9)', 'fade']">
+          <template v-for="{ item, active, attrs } in items" :key="item.title">
+            <p v-if="active" v-bind="attrs">
+            <p><strong>{{ item.title }}</strong></p>
+
+            <br>
+            Lorem ipsum dolor sit, amet consectetur adipisicing elit. Non architecto reiciendis quaerat sunt nihil
+            dolorum, doloribus quasi laboriosam eos sit saepe culpa voluptas dolores itaque distinctio, nam perspiciatis
+            unde necessitatibus.
+            </p>
+          </template>
+        </UiTransition>
+      </template>
+    </Tab>
+  </div>
+
 </template>
 
 <style>
