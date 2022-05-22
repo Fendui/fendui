@@ -163,40 +163,6 @@ export default defineComponent({
   left: 0;
   width: 100%;
   height: 100%;
+  animation: fendui-appear 150ms;
 }
 </style>
-<!-- 
-<template>
-  <div
-    class="relative isolate h-fit w-fit"
-    :class="{ 'min-w-[48px]': editing }"
-    @click="edit"
-  >
-    <span
-      :aria-hidden="editing || undefined"
-      class="inline-block transition-opacity"
-      :class="{ 'opacity-0 pointer-events-none': editing }"
-    >
-      {{ modelSync || fallback }}
-    </span>
-
-    <template v-if="editing">
-      <label :for="id" class="sr-only">
-        {{ placeholder || 'Editing' }}
-      </label>
-
-      <input
-        v-if="editing"
-        :id="id"
-        v-model="modelSync"
-        type="text"
-        :placeholder="placeholder || fallback"
-        class="outline-none px-8 focus:ring-2 ring-offset-2 ring-action-primary-default rounded border border-border-default absolute z-1 left-0 h-full w-full fade-appear"
-        @blur="stopEdit"
-        @keydown.stop
-        @keyup.enter.prevent="stopEdit"
-        @keyup.esc.prevent="stopEdit"
-      />
-    </template>
-  </div>
-</template> -->

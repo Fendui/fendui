@@ -1,3 +1,12 @@
+@keyframes fendui-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .hide-scrollbar {
   scrollbar-width: none;
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
 import { computed, ref } from "@vue/reactivity";
-import { defineComponent, h, HTMLAttributes, PropType } from "vue";
+import { defineComponent, h, PropType } from "vue";
 import { componentName, getType } from "../../utils";
 import Group from "../Group/index.vue"
 import { GroupPayload } from "../Group/type";

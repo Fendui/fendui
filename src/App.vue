@@ -384,8 +384,8 @@ export default defineComponent({
         </div>
       </template>
 
-      <template #content="{ isActive, items }">
-        <UiTransition :config="['slideX(-5)', 'fade']">
+      <template #content="{ items }">
+        <UiTransition :config="['slideY(-5)', 'fade']" :spring="{ enter: 'wobbly' }">
           <template v-for="{ item, active, attrs } in items" :key="item.title">
             <p v-if="active" v-bind="attrs">
             <p><strong>{{ item.title }}</strong></p>

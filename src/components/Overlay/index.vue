@@ -337,8 +337,10 @@ export default defineComponent({
       onAppearCancelled: transitionEnterEvents.cancelled,
       onAfterAppear: transitionEnterEvents.after,
       onBeforeLeave: () => {
-        if (props.value.restoreFocus && previousFocus.value) {
-          previousFocus.value.focus()
+        if (props.value.restoreFocus) {
+          if (previousFocus.value && document.contains(previousFocus.value)) {
+            previousFocus.value.focus()
+          }
 
           emit("restore-focus")
         }
